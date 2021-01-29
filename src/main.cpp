@@ -15,6 +15,8 @@
 #include "args/args.hxx"
 #include "imgui.h"
 
+#include "Walker.h"
+
 using namespace geometrycentral;
 using namespace geometrycentral::surface;
 
@@ -37,58 +39,20 @@ polyscope::CurveNetwork *psPath;
 
 std::string frameDir;
 
-glm::mat4 getFrame(Vector3 t, Vector3 n, Vector3 p) {
-  t = -t.normalize();
-  n = n.normalize();
-  Vector3 b = cross(n, t);
-
-  glm::mat4 f(1.f);
-  f[0][0] = b.x;
-  f[0][1] = b.y;
-  f[0][2] = b.z;
-  f[1][0] = n.x;
-  f[1][1] = n.y;
-  f[1][2] = n.z;
-  f[2][0] = t.x;
-  f[2][1] = t.y;
-  f[2][2] = t.z;
-
-  f[3][0] = p.x;
-  f[3][1] = p.y;
-  f[3][2] = p.z;
-
-  return f;
-}
-
-Vector3 getDirection() {
-  std::array<Vector3, 2> tb = geometry->faceTangentBasis[pos.face];
-  return direction.x * tb[0] + direction.y * tb[1];
-}
-
-void step() {
-  double stepSize = 0.01;
-  direction = direction.normalize();
-  TraceOptions options = defaultTraceOptions;
-  options.includePath = true;
-  TraceGeodesicResult result =
-      traceGeodesic(*geometry, pos, direction * stepSize, options);
-  pos = result.endPoint;
-  direction = result.endingDir;
-  for (size_t iP = 0; iP < result.pathPoints.size(); ++iP) {
-    pathEdges.push_back(std::array<size_t, 2>{path.size() - 1, path.size()});
-    path.push_back(
-        result.pathPoints[iP].interpolate(geometry->inputVertexPositions));
-  }
-}
-
 // A user-defined callback, for creating control panels (etc)
 // Use ImGUI commands to build whatever you want here, see
 // https://github.com/ocornut/imgui/blob/master/imgui.h
 static size_t frameID = 0;
 void myCallback() {
-  step();
+
+  std::vector<Vector3> stepTrajectory = step(direction, pos, *geometry);
+  for (Vector3 p : stepTrajectory) {
+    pathEdges.push_back(std::array<size_t, 2>{path.size() - 1, path.size()});
+    path.push_back(p);
+  }
+
   Vector3 srcPos = pos.interpolate(geometry->inputVertexPositions);
-  Vector3 t = getDirection();
+  Vector3 t = getExtrinsicDirection(direction, pos, *geometry);
   Vector3 n = geometry->faceNormals[pos.face];
 
   glm::mat4 frame = getFrame(t, n, srcPos);
@@ -120,6 +84,10 @@ int main(int argc, char **argv) {
   // Configure the argument parser
   args::ArgumentParser parser("geometry-central & Polyscope example project");
   args::Positional<std::string> inputFilename(parser, "mesh", "A mesh file.");
+  args::Positional<std::string> walkerFilename(
+      parser, "walking mesh",
+      "The mesh to animate. If none is included, the first mesh walks along "
+      "itself.");
   args::ValueFlag<std::string> outputPath(parser, "outputPath",
                                           "Render frames of walk to this path",
                                           {"outputPath"});
@@ -167,24 +135,45 @@ int main(int argc, char **argv) {
       polyscopePermutations(*mesh));
   psMesh->setTransparency(0.75);
 
-  VertexData<Vector3> smallPositions(*mesh);
-  double minY = 0;
-  for (Vertex v : mesh->vertices()) {
-    smallPositions[v] = smallScale * geometry->inputVertexPositions[v];
-    minY = fmin(minY, smallPositions[v].y);
+  if (walkerFilename) {
+    std::unique_ptr<ManifoldSurfaceMesh> smallMesh;
+    std::unique_ptr<VertexPositionGeometry> smallGeo;
+    std::tie(smallMesh, smallGeo) =
+        readManifoldSurfaceMesh(args::get(walkerFilename));
+
+    VertexData<Vector3> smallPositions(*smallMesh);
+    double minY = 0;
+    for (Vertex v : smallMesh->vertices()) {
+      smallPositions[v] = smallScale * smallGeo->inputVertexPositions[v];
+      minY = fmin(minY, smallPositions[v].y);
+    }
+    for (Vertex v : smallMesh->vertices())
+      smallPositions[v].y -= minY;
+    psSmallMesh = polyscope::registerSurfaceMesh(
+        polyscope::guessNiceNameFromPath(args::get(walkerFilename)) + "_small",
+        smallPositions, smallMesh->getFaceVertexList(),
+        polyscopePermutations(*smallMesh));
+  } else {
+    VertexData<Vector3> smallPositions(*mesh);
+    double minY = 0;
+    for (Vertex v : mesh->vertices()) {
+      smallPositions[v] = smallScale * geometry->inputVertexPositions[v];
+      minY = fmin(minY, smallPositions[v].y);
+    }
+    for (Vertex v : mesh->vertices())
+      smallPositions[v].y -= minY;
+    psSmallMesh = polyscope::registerSurfaceMesh(
+        polyscope::guessNiceNameFromPath(args::get(inputFilename)) + "_small",
+        smallPositions, mesh->getFaceVertexList(),
+        polyscopePermutations(*mesh));
   }
-  for (Vertex v : mesh->vertices())
-    smallPositions[v].y -= minY;
-  psSmallMesh = polyscope::registerSurfaceMesh(
-      polyscope::guessNiceNameFromPath(args::get(inputFilename)) + "_small",
-      smallPositions, mesh->getFaceVertexList(), polyscopePermutations(*mesh));
 
   geometry->requireFaceNormals();
   geometry->requireFaceTangentBasis();
   Face start = mesh->face(startingFace);
   pos = SurfacePoint(start, Vector3{1. / 3., 1. / 3., 1. / 3.});
   Vector3 srcPos = pos.interpolate(geometry->inputVertexPositions);
-  Vector3 t = getDirection();
+  Vector3 t = getExtrinsicDirection(direction, pos, *geometry);
   Vector3 n = geometry->faceNormals[start];
   path.push_back(srcPos);
 

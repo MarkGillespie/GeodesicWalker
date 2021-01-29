@@ -67,7 +67,7 @@ add_subdirectory(deps/polyscope)
 
 set(SRCS
   src/main.cpp
-	# add any other source files here
+  src/Walker.cpp
 )
 
 # To change the name of your executable, change "gc_project" in the lines below to whatever you want
