@@ -1,6 +1,6 @@
 #pragma once
 
-#include "polyscope/polyscope.h"
+#include <glm/glm.hpp>
 
 #include "geometrycentral/surface/manifold_surface_mesh.h"
 #include "geometrycentral/surface/trace_geodesic.h"
