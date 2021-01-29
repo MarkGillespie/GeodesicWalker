@@ -61,18 +61,30 @@ else()
   message( FATAL_ERROR "Unrecognized compiler [${CMAKE_CXX_COMPILER_ID}]" )
 endif()
 
-
-# == Deps
 add_subdirectory(deps/eigen-git-mirror)
 add_subdirectory(deps/geometry-central)
-add_subdirectory(deps/polyscope)
 
-set(SRCS
-  src/main.cpp
-  src/Walker.cpp
-)
+# == Deps
+if (EMSCRIPTEN)
+  set(SRCS
+    src/main.cpp
+    src/Walker.cpp
+    )
 
-add_executable(walk "${SRCS}")
-target_include_directories(walk PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/")
-target_link_libraries(walk geometry-central polyscope)
+  add_executable(embind "${SRCS}")
+  target_include_directories(embind PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/" "${CMAKE_CURRENT_SOURCE_DIR}/deps/polyscope/deps/glm" "${CMAKE_CURRENT_SOURCE_DIR}/deps/polyscope/deps/args")
+  target_link_libraries(embind geometry-central)
+  set_target_properties(embind PROPERTIES LINK_FLAGS "-s DEMANGLE_SUPPORT=1 -s ALLOW_MEMORY_GROWTH=1 --bind")
+else()
+  # only include polyscope for gui build
+  add_subdirectory(deps/polyscope)
 
+  set(SRCS
+    src/main.cpp
+    src/Walker.cpp
+  )
+
+  add_executable(walk "${SRCS}")
+  target_include_directories(walk PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/" "${CMAKE_CURRENT_SOURCE_DIR}/deps/polyscope/deps/glm" "${CMAKE_CURRENT_SOURCE_DIR}/deps/polyscope/deps/args")
+  target_link_libraries(walk geometry-central polyscope)
+endif()
