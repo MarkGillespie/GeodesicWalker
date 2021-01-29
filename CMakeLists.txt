@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.10.0)
 
 project(geodesic_walker)
+message(STATUS "c compilaer id: ${CMAKE_C_COMPILER_ID}")
+message(STATUS "cxx compilaer id: ${CMAKE_CXX_COMPILER_ID}")
+message(STATUS "Emscripten: ${EMSCRIPTEN}")
 
 ### Configure output locations
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -60,17 +63,16 @@ endif()
 
 
 # == Deps
+add_subdirectory(deps/eigen-git-mirror)
 add_subdirectory(deps/geometry-central)
 add_subdirectory(deps/polyscope)
-
-# == Build our project stuff
 
 set(SRCS
   src/main.cpp
   src/Walker.cpp
 )
 
-# To change the name of your executable, change "gc_project" in the lines below to whatever you want
 add_executable(walk "${SRCS}")
-target_include_directories(walk PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/")
+target_include_directories(walk PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/")
 target_link_libraries(walk geometry-central polyscope)
+

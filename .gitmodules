@@ -6,3 +6,6 @@
 	path = deps/polyscope
 	url = https://github.com/nmwsharp/polyscope.git
 	branch = v02
+[submodule "deps/eigen-git-mirror"]
+	path = deps/eigen-git-mirror
+	url = git@github.com:eigenteam/eigen-git-mirror.git
