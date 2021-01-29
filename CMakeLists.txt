@@ -67,7 +67,7 @@ add_subdirectory(deps/geometry-central)
 # == Deps
 if (EMSCRIPTEN)
   set(SRCS
-    src/main.cpp
+    src/embind.cpp
     src/Walker.cpp
     )
 
