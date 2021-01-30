@@ -1,0 +1,32 @@
+body {
+	font-family: Arial, Helvetica, sans-serif;
+	margin: 0;
+  padding: 0;
+	overflow: hidden;
+}
+
+#info {
+	position: absolute;
+	width: 100%;
+	text-align: center;
+}
+
+#meta {
+	position: absolute;
+	top: 50px;
+	left: 35%;
+	width: 30%;
+	font-size: 80%;
+	white-space: pre;
+}
+
+#logo {
+	position: absolute;
+	bottom: 10px;
+	right: 40px;
+	opacity: 0.8;
+}
+
+.octicon {
+    margin: 2em;
+}
