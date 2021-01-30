@@ -93,6 +93,14 @@ window.onload = function () {
   console.log("adding event listener");
   input.addEventListener("change", function (e) {
     console.log("picked new file");
+
+    // remove any previously loaded mesh from scene
+    scene.remove(threeMesh);
+      scene.remove(threeWalkerMesh);
+
+      // show spinner
+    document.getElementById("spinner").style.display = "inline-block";
+
     let file = input.files[0];
     filename = file.name;
 
@@ -202,6 +210,8 @@ function initMesh(text) {
   // update metadata
   updateDisplayText();
 
+  console.log("Hiding spinner", document.getElementById("spinner"));
+  document.getElementById("spinner").style.display = "none";
   step();
 }
 
