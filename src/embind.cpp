@@ -10,9 +10,22 @@
 #include <Eigen/Dense>
 #include <Eigen/SparseCore>
 
+#include "geometrycentral/surface/manifold_surface_mesh.h"
+#include "geometrycentral/surface/simple_polygon_mesh.h"
+#include "geometrycentral/surface/trace_geodesic.h"
+#include "geometrycentral/surface/vertex_position_geometry.h"
+
+#include "Walker.h"
+
 using namespace emscripten;
 using namespace geometrycentral;
 using namespace geometrycentral::surface;
+
+struct StepResult {
+  Vector3 T, N, B, pos;
+  Vector2 dir;
+  SurfacePoint surfacePos;
+};
 
 // Stolen from Ricky Reusser https://observablehq.com/d/d0df0c04ce5c94FCC
 template <typename T>
@@ -25,88 +38,26 @@ void copyToVector(const val &typedArray, std::vector<T> &vec) {
   memoryView.call<void>("set", typedArray);
 }
 
-CornerData<Vector2> scpImpl(ManifoldSurfaceMesh &mesh,
-                            VertexPositionGeometry &geo) {
-  geo.requireCotanLaplacian();
-  geo.requireVertexLumpedMassMatrix();
-  SparseMatrix<std::complex<double>> L =
-      geo.cotanLaplacian.cast<std::complex<double>>();
-  SparseMatrix<std::complex<double>> M =
-      geo.vertexLumpedMassMatrix.cast<std::complex<double>>();
-
-  VertexData<size_t> vIdx = mesh.getVertexIndices();
-
-  // build the area term
-  std::complex<double> i(0, 1);
-  std::vector<Eigen::Triplet<std::complex<double>>> T;
-  for (BoundaryLoop b : mesh.boundaryLoops()) {
-    for (Halfedge he : b.adjacentHalfedges()) {
-      size_t j = vIdx[he.twin().vertex()];
-      size_t k = vIdx[he.vertex()];
-
-      T.emplace_back(Eigen::Triplet<std::complex<double>>(j, k, i * 0.25));
-      T.emplace_back(Eigen::Triplet<std::complex<double>>(k, j, i * -0.25));
-    }
-  }
-  SparseMatrix<std::complex<double>> A(mesh.nVertices(), mesh.nVertices());
-  A.setFromTriplets(T.begin(), T.end());
-
-  SparseMatrix<std::complex<double>> EC = 0.5 * L - A;
-
-  Vector<std::complex<double>> ones =
-      Vector<std::complex<double>>::Ones(mesh.nVertices());
-
-  Vector<std::complex<double>> pos =
-      smallestKEigenvectorsPositiveDefinite(EC, M, 2)[1];
-
-  double meanPos = std::norm(pos.lpNorm<2>()) / (double)mesh.nVertices();
-
-  CornerData<Vector2> positions(mesh);
-  for (Vertex v : mesh.vertices()) {
-    Vector2 vPos = Vector2{std::real(pos[vIdx[v]]), std::imag(pos[vIdx[v]])};
-    for (Corner c : v.adjacentCorners()) {
-      positions[c] = vPos / meanPos;
-    }
-  }
-
-  return positions;
+SurfacePoint getStartingPoint(VertexPositionGeometry &geo) {
+  Face start = geo.mesh.face(0);
+  return SurfacePoint(start, Vector3{1. / 3., 1. / 3., 1. / 3.});
 }
 
-SimplePolygonMesh scp(std::string str, std::string type = "") {
-  std::cout << "Reading file" << std::endl;
-  std::stringstream in;
-  in << str;
+StepResult takeStep(Vector2 direction, SurfacePoint pos,
+                    VertexPositionGeometry &geo, double stepSize) {
+  StepResult result;
 
-  std::cout << "Building halfedge mesh" << std::endl;
-  std::unique_ptr<ManifoldSurfaceMesh> mesh;
-  std::unique_ptr<VertexPositionGeometry> geo;
-  std::tie(mesh, geo) = readManifoldSurfaceMesh(in, type);
+  std::vector<Vector3> stepTrajectory = step(direction, pos, geo, stepSize);
 
-  std::vector<Vector3> vertexPositions;
-  for (Vertex v : mesh->vertices()) {
-    vertexPositions.push_back(geo->inputVertexPositions[v]);
-  }
+  result.pos = pos.interpolate(geo.inputVertexPositions);
+  result.T = getExtrinsicDirection(direction, pos, geo).normalize();
+  geo.requireFaceNormals();
+  result.N = geo.faceNormals[pos.face];
+  result.B = cross(result.T, result.N);
+  result.dir = direction;
+  result.surfacePos = pos;
 
-  std::cout << "Computing parameterization" << std::endl;
-  CornerData<Vector2> param = scpImpl(*mesh, *geo);
-  std::vector<std::vector<Vector2>> paramVec;
-  for (Face f : mesh->faces()) {
-    std::vector<Vector2> faceCoords;
-    for (Corner c : f.adjacentCorners()) {
-      faceCoords.push_back(param[c]);
-    }
-    paramVec.push_back(faceCoords);
-  }
-
-  std::cout << "Returning mesh" << std::endl;
-  return SimplePolygonMesh(mesh->getFaceVertexList(), vertexPositions,
-                           paramVec);
-}
-
-SimplePolygonMesh readMesh(std::string str, std::string type = "") {
-  std::stringstream in;
-  in << str;
-  return SimplePolygonMesh(in, type);
+  return result;
 }
 
 // Mostly stolen from Ricky Reusser https://observablehq.com/d/d0df0c04ce5c94fc
@@ -120,40 +71,60 @@ EMSCRIPTEN_BINDINGS(my_module) {
   register_vector<Vector3>("VectorVector3");
   register_vector<size_t>("VectorSizeT");
   register_vector<std::vector<size_t>>("VectorVectorSizeT");
-  register_vector<Vector2>("VectorVector2");
-  register_vector<std::vector<Vector2>>("VectorVectorVector2");
 
-  class_<SimplePolygonMesh>("SimplePolygonMesh")
-      .constructor()
-      .function("polygons", optional_override([](SimplePolygonMesh &self) {
-                  return self.polygons;
-                }))
+  class_<ManifoldSurfaceMesh>("ManifoldSurfaceMesh")
+      .function("polygons", optional_override([](ManifoldSurfaceMesh &self) {
+                  return self.getFaceVertexList();
+                }));
+  class_<VertexPositionGeometry>("VertexPositionGeometry")
       .function("vertexCoordinates",
-                optional_override([](const SimplePolygonMesh &self) {
-                  return self.vertexCoordinates;
-                }))
-      .function("textureCoordinates",
-                optional_override([](const SimplePolygonMesh &self) {
-                  return self.paramCoordinates;
-                }))
-      // .function("vertexCoordinatesDataView",
-      //           optional_override([](const SimplePolygonMesh& self) {
-      //               return val(typed_memory_view(
-      //                   self.vertexCoordinates.size() * 3,
-      //                   (double*)self.vertexCoordinates.data()));
-      //           }))
-      // .function("textureCoordinatesDataView",
-      //           optional_override([](const SimplePolygonMesh& self) {
-      //               size_t nCorners = 0;
-      //               for (const std::vector<size_t>& face : self.polygons) {
-      //                   nCorners += face.size();
-      //               }
-      //               return val(typed_memory_view(
-      //                   nCorners * 2,
-      //                   (double*)self.paramCoordinates.data()));
-      //           }))
-      ;
+                optional_override([](const VertexPositionGeometry &self) {
+                  std::vector<Vector3> vCoords;
+                  for (Vertex v : self.mesh.vertices())
+                    vCoords.push_back(self.inputVertexPositions[v]);
+                  return vCoords;
+                }));
+  class_<SurfacePoint>("SurfacePoint");
 
-  function("readMesh", &readMesh);
-  function("scp", &scp);
+  function("readMesh",
+           optional_override([](std::string str, std::string type = "") {
+             std::stringstream in;
+             in << str;
+             SimplePolygonMesh soup(in, type);
+             std::unique_ptr<ManifoldSurfaceMesh> mesh(
+                 new ManifoldSurfaceMesh(soup.polygons));
+             return mesh;
+           }));
+
+  function("readGeo",
+           optional_override([](ManifoldSurfaceMesh &mesh, std::string str,
+                                std::string type = "") {
+             std::stringstream in;
+             in << str;
+             SimplePolygonMesh soup(in, type);
+
+             VertexData<Vector3> vertexPositions(mesh);
+             Vector3 average{0, 0, 0};
+             // for (size_t iV = 0; iV < mesh.nVertices(); ++iV) {
+             //   average += soup.vertexCoordinates[iV];
+             // }
+             // average /= mesh.nVertices();
+             for (size_t iV = 0; iV < mesh.nVertices(); ++iV) {
+               vertexPositions[iV] = soup.vertexCoordinates[iV] - average;
+             }
+             std::unique_ptr<VertexPositionGeometry> geo(
+                 new VertexPositionGeometry(mesh, vertexPositions));
+             return geo;
+           }));
+
+  value_object<StepResult>("StepResult")
+      .field("T", &StepResult::T)
+      .field("N", &StepResult::N)
+      .field("B", &StepResult::B)
+      .field("pos", &StepResult::pos)
+      .field("dir", &StepResult::dir)
+      .field("surfacePos", &StepResult::surfacePos);
+
+  function("getStartingPoint", &getStartingPoint);
+  function("takeStep", &takeStep);
 }
