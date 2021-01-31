@@ -270,20 +270,16 @@ class Polyscope {
     let io = this.commandGui.addFolder("IO");
     io.add(this.commandGuiFields, "Load Mesh");
     io.close();
-    this.commandGui.add(this.commandGuiFields, "Speed");
+    this.commandGui
+      .add(this.commandGuiFields, "Speed")
+      .min(0)
+      .max(10)
+      .step(0.1);
   }
 
   updateDisplayText() {
     let element = document.getElementById("meta");
     element.textContent = "";
-  }
-
-  toggleWireframe(checked, structure) {
-    if (checked) {
-      structure.mesh.material.uniforms.edgeWidth.value = 1;
-    } else {
-      structure.mesh.material.uniforms.edgeWidth.value = 0;
-    }
   }
 
   initCamera() {
@@ -363,15 +359,27 @@ class Polyscope {
       })
       .listen()
       .name("Color");
-    this.structureGuiFields[name + "#Show Wireframe"] = false;
+    this.structureGuiFields[name + "#Edge Width"] = 0;
     meshGui
-      .add(this.structureGuiFields, name + "#Show Wireframe")
-      .onChange((checked) => {
-        this.toggleWireframe(checked, meshStructure);
+      .add(this.structureGuiFields, name + "#Edge Width")
+      .min(0)
+      .max(2)
+      .step(0.05)
+      .onChange((width) => {
+        meshStructure.mesh.material.uniforms.edgeWidth.value = width;
       })
       .listen()
-      .name("Show Wireframe");
+      .name("Edge Width");
     meshGui.open();
+
+    this.structureGuiFields[name + "#Edge Color"] = [0, 0, 0];
+    meshGui
+      .addColor(this.structureGuiFields, name + "#Edge Color")
+      .onChange((c) => {
+        this.updateMeshEdgeColor(meshStructure, c);
+      })
+      .listen()
+      .name("Edge Color");
 
     this.updateMeshColor(
       meshStructure,
@@ -468,6 +476,10 @@ class Polyscope {
     meshStructure.mesh.material.uniforms.color.value = c;
   }
 
+  updateMeshEdgeColor(meshStructure, color) {
+    let c = new THREE.Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
+    meshStructure.mesh.material.uniforms.edgeColor.value = c;
+  }
   initControls() {
     this.controls = new THREE.TrackballControls(
       this.camera,
