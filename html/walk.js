@@ -1,3 +1,57 @@
+function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
+  let vertexShader = `
+        varying vec2 Point;
+
+        void main()
+        {
+            vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
+            vNormal = normalize(vNormal);
+
+            Point.x = vNormal.x * 0.5 + 0.5;
+            Point.y = vNormal.y * 0.5 + 0.5;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+        }
+    `;
+
+  let fragmentShader = `
+        uniform sampler2D Matcap_r; // Matcap texture
+        uniform sampler2D Matcap_g; // Matcap texture
+        uniform sampler2D Matcap_b; // Matcap texture
+        uniform sampler2D Matcap_k; // Matcap texture
+        uniform vec3 color;
+
+        varying vec2 Point;
+
+        void main(void){
+
+            vec4 mat_r = texture2D(Matcap_r, Point);
+            vec4 mat_g = texture2D(Matcap_g, Point);
+            vec4 mat_b = texture2D(Matcap_b, Point);
+            vec4 mat_k = texture2D(Matcap_k, Point);
+
+            vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b + 
+                                (1. - color.r - color.g - color.b) * mat_k;
+
+            gl_FragColor = colorCombined;
+        }
+    `;
+
+  let Material = new THREE.ShaderMaterial({
+    uniforms: {
+      Matcap_r: { value: tex_r },
+      Matcap_g: { value: tex_g },
+      Matcap_b: { value: tex_b },
+      Matcap_k: { value: tex_k },
+      color: { value: new THREE.Vector3(1, 0, 1) },
+    },
+    vertexShader,
+    fragmentShader,
+  });
+
+  return Material;
+}
+
 if (!Detector.webgl) Detector.addGetWebGLMessage();
 
 let input = document.getElementById("fileInput");
@@ -21,12 +75,13 @@ let materialSettings = {
   polygonOffsetUnits: 1,
   side: THREE.DoubleSide,
 };
+let matcapTextures = undefined;
+let matcapMaterial = undefined;
+let walkerMatcapMaterial = undefined;
 
 let positions = undefined;
-let uvs = undefined;
 let normals = undefined;
 let colors = undefined;
-let uvColors = undefined;
 let indices = undefined;
 
 let meshFile = undefined;
@@ -49,6 +104,8 @@ let guiFields = {
     input.click();
   },
   Speed: 1,
+  "Base Color": [255, 180, 60],
+  "Walker Color": [180, 60, 255],
   Reset: function () {
     selectedVertex = undefined;
   },
@@ -60,6 +117,7 @@ function init() {
   document.body.appendChild(container);
 
   initRenderer(container);
+  initMatcap();
   initGUI();
   initCamera();
   initScene();
@@ -67,6 +125,26 @@ function init() {
   initMesh(bunny);
   initControls();
   addEventListeners();
+}
+
+function initMatcap() {
+  matcapTextures = { r: undefined, g: undefined, b: undefined, k: undefined };
+  matcapTextures.r = new THREE.TextureLoader().load("img/clay_r.jpg");
+  matcapTextures.g = new THREE.TextureLoader().load("img/clay_g.jpg");
+  matcapTextures.b = new THREE.TextureLoader().load("img/clay_b.jpg");
+  matcapTextures.k = new THREE.TextureLoader().load("img/clay_k.jpg");
+  matcapMaterial = createMatCapMaterial(
+    matcapTextures.r,
+    matcapTextures.g,
+    matcapTextures.b,
+    matcapTextures.k
+  );
+walkerMatcapMaterial = createMatCapMaterial(
+    matcapTextures.r,
+    matcapTextures.g,
+    matcapTextures.b,
+    matcapTextures.k
+);
 }
 
 function initRenderer(container) {
@@ -86,6 +164,8 @@ function initGUI() {
   io.add(guiFields, "Load Mesh");
   io.close();
   gui.add(guiFields, "Speed");
+  gui.addColor(guiFields, "Base Color").onChange(updateMeshColor).listen();
+  gui.addColor(guiFields, "Walker Color").onChange(updateWalkerMeshColor).listen();
   gui.add(guiFields, "Show Wireframe").onChange(toggleWireframe).listen();
 }
 
@@ -96,9 +176,9 @@ window.onload = function () {
 
     // remove any previously loaded mesh from scene
     scene.remove(threeMesh);
-      scene.remove(threeWalkerMesh);
+    scene.remove(threeWalkerMesh);
 
-      // show spinner
+    // show spinner
     document.getElementById("spinner").style.display = "inline-block";
 
     let file = input.files[0];
@@ -272,7 +352,6 @@ function initThreeMesh() {
   // fill position and color buffers
   let V = coords.size();
   positions = new Float32Array(V * 3);
-  uvs = new Float32Array(V * 3);
   normals = new Float32Array(V * 3);
   colors = new Float32Array(V * 3);
   for (let i = 0; i < V; i++) {
@@ -306,7 +385,6 @@ function initThreeMesh() {
     "position",
     new THREE.BufferAttribute(positions, 3)
   );
-  threeGeometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 3));
   threeGeometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   threeGeometry.computeVertexNormals();
   threeGeometry.setAttribute(
@@ -326,7 +404,18 @@ function initThreeMesh() {
   });
 
   // create mesh
-  threeMesh = new THREE.Mesh(threeGeometry, threeMaterial);
+    threeMesh = new THREE.Mesh(threeGeometry, matcapMaterial);
+    updateMeshColor();
+}
+
+function updateMeshColor() {
+    let c = new THREE.Vector3(guiFields["Base Color"][0]/255, guiFields["Base Color"][1]/255, guiFields["Base Color"][2]/255);
+    threeMesh.material.uniforms.color.value =c;
+}
+
+function updateWalkerMeshColor() {
+    let c = new THREE.Vector3(guiFields["Walker Color"][0]/255, guiFields["Walker Color"][1]/255, guiFields["Walker Color"][2]/255);
+    threeWalkerMesh.material.uniforms.color.value =c;
 }
 
 function initThreeWalkerMesh() {
@@ -344,7 +433,6 @@ function initThreeWalkerMesh() {
 
   // fill position, normal and color buffers
   positions = new Float32Array(V * 3);
-  uvs = new Float32Array(V * 3);
   normals = new Float32Array(V * 3);
   colors = new Float32Array(V * 3);
   let scale = 1 / 10;
@@ -366,7 +454,6 @@ function initThreeWalkerMesh() {
     "position",
     new THREE.BufferAttribute(positions, 3)
   );
-  threeWalkerGeometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 3));
   threeWalkerGeometry.setAttribute(
     "color",
     new THREE.BufferAttribute(colors, 3)
@@ -385,10 +472,9 @@ function initThreeWalkerMesh() {
   });
 
   // create mesh
-  threeWalkerMesh = new THREE.Mesh(threeWalkerGeometry, threeWalkerMaterial);
+  threeWalkerMesh = new THREE.Mesh(threeWalkerGeometry, walkerMatcapMaterial);
   threeWalkerMesh.translateX(-0.4);
-
-  // threeWalkerGroup.add
+     updateWalkerMeshColor();
 }
 
 function initControls() {
