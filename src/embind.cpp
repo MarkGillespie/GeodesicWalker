@@ -104,13 +104,8 @@ EMSCRIPTEN_BINDINGS(my_module) {
              SimplePolygonMesh soup(in, type);
 
              VertexData<Vector3> vertexPositions(mesh);
-             Vector3 average{0, 0, 0};
-             // for (size_t iV = 0; iV < mesh.nVertices(); ++iV) {
-             //   average += soup.vertexCoordinates[iV];
-             // }
-             // average /= mesh.nVertices();
              for (size_t iV = 0; iV < mesh.nVertices(); ++iV) {
-               vertexPositions[iV] = soup.vertexCoordinates[iV] - average;
+               vertexPositions[iV] = soup.vertexCoordinates[iV];
              }
              std::unique_ptr<VertexPositionGeometry> geo(
                  new VertexPositionGeometry(mesh, vertexPositions));
