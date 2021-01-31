@@ -84,7 +84,8 @@ class MeshStructure {
 
 class Polyscope {
   constructor() {
-    this.input = document.getElementById("fileInput");
+    this.input = undefined;
+
     this.renderer = undefined;
     this.camera = undefined;
     this.controls = undefined;
@@ -121,6 +122,19 @@ class Polyscope {
 
     this.onMeshLoad = (text) => {};
     this.userCallback = () => {};
+  }
+
+  // must be called after onload
+  initInput() {
+    console.log("hi");
+    let inputContainer = document.createElement("div");
+    this.input = document.createElement("input");
+    inputContainer.appendChild(this.input);
+    document.body.appendChild(inputContainer);
+    this.input.id = "fileInput";
+    this.input.style.display = "none";
+    this.input.type = "file";
+    console.log(this.input);
   }
 
   init() {
@@ -271,7 +285,7 @@ class Polyscope {
   deregisterSurfaceMesh(name) {
     if (!(name in this.structures)) return;
 
-    this.structureGui.removeFolder(name);
+    this.structureGuiMeshes.removeFolder(name);
     this.scene.remove(this.structures[name].mesh);
     delete this.structures[name];
   }
@@ -399,6 +413,7 @@ class Polyscope {
 let polyscope = new Polyscope();
 
 window.onload = function () {
+  polyscope.initInput();
   console.log("adding event listener");
   polyscope.input.addEventListener("change", function (e) {
     console.log("picked new file");
