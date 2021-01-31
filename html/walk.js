@@ -32,10 +32,9 @@ polyscope.onMeshLoad = (text) => {
     geo.vertexCoordinates(),
     mesh.polygons()
   );
-  psWalkerMesh.setColor([180, 60, 225]);
 
   // Translate walker up to walk along surface, and scale it down
-  // fill position and color buffers
+  // fill position buffer
   const positions = psWalkerMesh.mesh.geometry.attributes.position.array;
   let V = psWalkerMesh.mesh.geometry.attributes.position.count;
   let minY = positions[1];
