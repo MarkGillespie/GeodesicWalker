@@ -59,34 +59,32 @@ polyscope.onMeshLoad = (text) => {
 
 polyscope.userCallback = () => {
   if (psWalkerMesh) {
-    psWalkerMesh.mesh.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
     let stepResult = Module.takeStep(
       walkerDirection,
       walkerSurfacePoint,
       geo,
       polyscope.commandGuiFields["Speed"] / 100
     );
-    let m = new THREE.Matrix4();
+
     let T = vec3ToTHREE(stepResult.T);
     let N = vec3ToTHREE(stepResult.N);
     let B = vec3ToTHREE(stepResult.B);
 
-    // prettier-ignore
-    m.set(
-      -T.x, N.x, -B.x, 0,
-      -T.y, N.y, -B.y, 0,
-      -T.z, N.z, -B.z, 0,
-      0,    0,   0,    1
-    );
     walkerDirection = stepResult.dir;
     walkerSurfacePoint = stepResult.surfacePos;
 
-    let pos = vec3ToTHREE(stepResult.pos);
-    let oldPos = psWalkerMesh.mesh.position;
-    psWalkerMesh.mesh.translateX(pos.x - oldPos.x, 1);
-    psWalkerMesh.mesh.translateY(pos.y - oldPos.y, 1);
-    psWalkerMesh.mesh.translateZ(pos.z - oldPos.z, 1);
-    psWalkerMesh.mesh.setRotationFromMatrix(m);
+    psWalkerMesh.setPosition(vec3ToTHREE(stepResult.pos));
+
+    let mat = new THREE.Matrix4();
+    // prettier-ignore
+    mat.set(
+          -T.x, N.x, -B.x, 0,
+          -T.y, N.y, -B.y, 0,
+          -T.z, N.z, -B.z, 0,
+          0,    0,   0,    1
+      );
+
+    psWalkerMesh.setOrientationFromMatrix(mat);
   }
 };
 

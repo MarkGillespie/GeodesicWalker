@@ -54,8 +54,6 @@ function hsvToRgb(h, s, v) {
   let p = v * (1 - s);
   let q = v * (1 - f * s);
   let t = v * (1 - (1 - f) * s);
-  console.log("in", h, s, v);
-  console.log("intermediate", i, f, p, q, t);
 
   switch (i % 6) {
     case 0:
@@ -78,8 +76,6 @@ function hsvToRgb(h, s, v) {
       break;
   }
 
-  console.log(h, s, v);
-  console.log(r, g, b);
   return [r * 255, g * 255, b * 255];
 }
 
@@ -264,6 +260,41 @@ class MeshStructure {
       this,
       this.ps.structureGuiFields[this.name + "#Color"]
     );
+  }
+
+  setPosition(pos) {
+    // First, undo the mesh's rotation so that we translate in the global coordinate frame
+    let oldRot = new THREE.Euler(
+      this.mesh.rotation.x,
+      this.mesh.rotation.y,
+      this.mesh.rotation.z
+    );
+    psWalkerMesh.mesh.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
+    let oldPos = this.mesh.position;
+    this.mesh.translateX(pos.x - oldPos.x, 1);
+    this.mesh.translateY(pos.y - oldPos.y, 1);
+    this.mesh.translateZ(pos.z - oldPos.z, 1);
+
+    // After translating, we re-apply the old rotation
+    this.mesh.setRotationFromEuler(oldRot);
+  }
+
+  setOrientationFromMatrix(mat) {
+    psWalkerMesh.mesh.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
+    this.mesh.setRotationFromMatrix(mat);
+  }
+
+  setOrientationFromFrame(T, N, B) {
+    let mat = new THREE.Matrix4();
+    // prettier-ignore
+    mat.set(
+          -T.x, N.x, -B.x, 0,
+          -T.y, N.y, -B.y, 0,
+          -T.z, N.z, -B.z, 0,
+          0,    0,   0,    1
+      );
+
+    this.setOrientationFromMatrix(mat);
   }
 }
 
