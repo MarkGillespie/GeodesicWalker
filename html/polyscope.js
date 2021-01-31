@@ -681,6 +681,7 @@ window.onload = function () {
       reader.onload = function (e) {
         console.log("read input file");
         polyscope.onMeshLoad(reader.result);
+        document.getElementById("spinner").style.display = "none";
       };
 
       reader.onerror = function (e) {

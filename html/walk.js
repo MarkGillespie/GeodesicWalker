@@ -53,8 +53,6 @@ polyscope.onMeshLoad = (text) => {
 
   // update metadata
   polyscope.updateDisplayText();
-
-  document.getElementById("spinner").style.display = "none";
 };
 
 polyscope.userCallback = () => {
