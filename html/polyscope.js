@@ -10,17 +10,26 @@ dat.GUI.prototype.removeFolder = function (name) {
   this.onResize();
 };
 
+// https://github.com/mrdoob/three.js/issues/6117#issuecomment-75461347
+// Apparently passing in face normals is hard in WebGL, so people use this dFdx trick to compute face
+// normals in the shader
 function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
   let vertexShader = `
-        varying vec2 Point;
+        varying vec3 Point;
+        uniform bool shadeSmooth;
 
         void main()
         {
             vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
             vNormal = normalize(vNormal);
 
-            Point.x = vNormal.x * 0.5 + 0.5;
-            Point.y = vNormal.y * 0.5 + 0.5;
+            if (shadeSmooth) {
+                Point.x = vNormal.x * 0.5 + 0.5;
+                Point.y = vNormal.y * 0.5 + 0.5;
+            } else {
+                Point = (modelViewMatrix * vec4( position, 1.0 )).xyz;
+            }
+
             gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
 
         }
@@ -32,15 +41,28 @@ function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
         uniform sampler2D Matcap_b; // Matcap texture
         uniform sampler2D Matcap_k; // Matcap texture
         uniform vec3 color;
+        uniform bool shadeSmooth;
 
-        varying vec2 Point;
+        varying vec3 Point;
 
         void main(void){
 
-            vec4 mat_r = texture2D(Matcap_r, Point);
-            vec4 mat_g = texture2D(Matcap_g, Point);
-            vec4 mat_b = texture2D(Matcap_b, Point);
-            vec4 mat_k = texture2D(Matcap_k, Point);
+            vec2 n = Point.xy;
+
+            if (!shadeSmooth) {
+                vec3 fdx = vec3(dFdx(Point.x),dFdx(Point.y),dFdx(Point.z));
+                vec3 fdy = vec3(dFdy(Point.x),dFdy(Point.y),dFdy(Point.z));
+
+                vec3 normal = normalize(cross(fdx,fdy));
+
+                n.x = normal.x * 0.5 + 0.5;
+                n.y = normal.y * 0.5 + 0.5;
+            }
+
+            vec4 mat_r = texture2D(Matcap_r, n);
+            vec4 mat_g = texture2D(Matcap_g, n);
+            vec4 mat_b = texture2D(Matcap_b, n);
+            vec4 mat_k = texture2D(Matcap_k, n);
 
             vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b + 
                                 (1. - color.r - color.g - color.b) * mat_k;
@@ -56,6 +78,7 @@ function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
       Matcap_b: { value: tex_b },
       Matcap_k: { value: tex_k },
       color: { value: new THREE.Vector3(1, 0, 1) },
+      shadeSmooth: { value: true },
     },
     vertexShader,
     fragmentShader,
@@ -253,8 +276,27 @@ class Polyscope {
     );
     this.structures[name] = meshStructure;
 
-    this.structureGuiFields[name + "#Color"] = [255, 180, 60];
     let meshGui = this.structureGuiMeshes.addFolder(name);
+
+    this.structureGuiFields[name + "#Enabled"] = true;
+    meshGui
+      .add(this.structureGuiFields, name + "#Enabled")
+      .onChange((c) => {
+        this.setMeshEnabled(meshStructure, c);
+      })
+      .listen()
+      .name("Enabled");
+
+    this.structureGuiFields[name + "#Smooth"] = true;
+    meshGui
+      .add(this.structureGuiFields, name + "#Smooth")
+      .onChange((c) => {
+        this.setMeshSmoothShading(meshStructure, c);
+      })
+      .listen()
+      .name("Smooth");
+
+    this.structureGuiFields[name + "#Color"] = [255, 180, 60];
     meshGui
       .addColor(this.structureGuiFields, name + "#Color")
       .onChange((c) => {
@@ -280,6 +322,18 @@ class Polyscope {
     this.scene.add(threeMesh);
 
     return meshStructure;
+  }
+
+  setMeshEnabled(mesh, enabled) {
+    if (enabled) {
+      this.scene.add(this.structures[mesh.name].mesh);
+    } else {
+      this.scene.remove(this.structures[mesh.name].mesh);
+    }
+  }
+
+  setMeshSmoothShading(mesh, shadeSmooth) {
+    mesh.mesh.material.uniforms.shadeSmooth = shadeSmooth;
   }
 
   deregisterSurfaceMesh(name) {
@@ -332,10 +386,6 @@ class Polyscope {
       new THREE.BufferAttribute(positions, 3)
     );
     threeGeometry.computeVertexNormals();
-    threeGeometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(positions, 3)
-    );
 
     // create wireframe
     let wireframe = new THREE.LineSegments();
