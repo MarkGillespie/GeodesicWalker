@@ -50,8 +50,6 @@ polyscope.onMeshLoad = (text) => {
   }
   psWalkerMesh.mesh.geometry.attributes.position.needsUpdate = true;
 
-  polyscope.guiFields["Reset"]();
-
   // update metadata
   polyscope.updateDisplayText();
 
@@ -65,7 +63,7 @@ polyscope.userCallback = () => {
       walkerDirection,
       walkerSurfacePoint,
       geo,
-      polyscope.guiFields["Speed"] / 100
+      polyscope.commandGuiFields["Speed"] / 100
     );
     let m = new THREE.Matrix4();
     let T = vec3ToTHREE(stepResult.T);

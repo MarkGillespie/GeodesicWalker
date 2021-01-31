@@ -74,8 +74,11 @@ class MeshStructure {
   }
 
   setColor(color) {
-    this.ps.guiFields[this.name + "#Color"] = color;
-    this.ps.updateMeshColor(this, this.ps.guiFields[this.name + "#Color"]);
+    this.ps.structureGuiFields[this.name + "#Color"] = color;
+    this.ps.updateMeshColor(
+      this,
+      this.ps.structureGuiFields[this.name + "#Color"]
+    );
   }
 }
 
@@ -104,14 +107,16 @@ class Polyscope {
 
     this.filename = "bunny.obj";
 
-    this.gui = undefined;
-    this.guiFields = {
+    this.structureGui = undefined;
+    this.structureGuiFields = {};
+    this.structureGuiMeshes = undefined;
+
+    this.commandGui = undefined;
+    this.commandGuiFields = {
       "Load Mesh": () => {
         this.input.click();
       },
       Speed: 1,
-      Reset: () => {},
-      "Show Wireframe": this.showWireframe,
     };
 
     this.onMeshLoad = (text) => {};
@@ -158,12 +163,18 @@ class Polyscope {
   }
 
   initGUI() {
-    this.gui = new dat.GUI();
+    this.structureGui = new dat.GUI({ autoPlace: false });
 
-    let io = this.gui.addFolder("IO");
-    io.add(this.guiFields, "Load Mesh");
+    let structureGuiWrapper = document.createElement("div");
+    document.body.appendChild(structureGuiWrapper);
+    structureGuiWrapper.id = "structure-gui";
+    structureGuiWrapper.appendChild(this.structureGui.domElement);
+
+    this.commandGui = new dat.GUI();
+    let io = this.commandGui.addFolder("IO");
+    io.add(this.commandGuiFields, "Load Mesh");
     io.close();
-    this.gui.add(this.guiFields, "Speed");
+    this.commandGui.add(this.commandGuiFields, "Speed");
   }
 
   updateDisplayText() {
@@ -208,6 +219,10 @@ class Polyscope {
   }
 
   registerSurfaceMesh(name, vertexCoordinates, faces, scale = 1) {
+    if (!this.structureGuiMeshes) {
+      this.structureGuiMeshes = this.structureGui.addFolder("Surface Meshes");
+      this.structureGuiMeshes.open();
+    }
     // create THREE.js mesh (and geometry) objects
     let [threeMesh, threeGeometry, wireframe] = this.constructPolyscopeMesh(
       vertexCoordinates,
@@ -224,25 +239,29 @@ class Polyscope {
     );
     this.structures[name] = meshStructure;
 
-    this.guiFields[name + "#Color"] = [255, 180, 60];
-    let meshGui = this.gui.addFolder(name);
+    this.structureGuiFields[name + "#Color"] = [255, 180, 60];
+    let meshGui = this.structureGuiMeshes.addFolder(name);
     meshGui
-      .addColor(this.guiFields, name + "#Color")
+      .addColor(this.structureGuiFields, name + "#Color")
       .onChange((c) => {
         this.updateMeshColor(meshStructure, c);
       })
       .listen()
       .name("Color");
-    this.guiFields[name + "#Show Wireframe"] = false;
+    this.structureGuiFields[name + "#Show Wireframe"] = false;
     meshGui
-      .add(this.guiFields, name + "#Show Wireframe")
+      .add(this.structureGuiFields, name + "#Show Wireframe")
       .onChange((checked) => {
         this.toggleWireframe(checked, meshStructure);
       })
       .listen()
       .name("Show Wireframe");
-    meshGui.close();
-    this.updateMeshColor(meshStructure, this.guiFields[name + "#Color"]);
+    meshGui.open();
+
+    this.updateMeshColor(
+      meshStructure,
+      this.structureGuiFields[name + "#Color"]
+    );
 
     this.scene.add(threeMesh);
 
@@ -252,7 +271,7 @@ class Polyscope {
   deregisterSurfaceMesh(name) {
     if (!(name in this.structures)) return;
 
-    this.gui.removeFolder(name);
+    this.structureGui.removeFolder(name);
     this.scene.remove(this.structures[name].mesh);
     delete this.structures[name];
   }
