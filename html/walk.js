@@ -48,6 +48,8 @@ polyscope.onMeshLoad = (text) => {
     positions[3 * i + 1] = (positions[3 * i + 1] - minY) * scale;
     positions[3 * i + 2] = positions[3 * i + 2] * scale;
   }
+  psWalkerMesh.mesh.geometry.computeBoundingBox();
+  psWalkerMesh.mesh.geometry.computeBoundingSphere();
   psWalkerMesh.mesh.geometry.attributes.position.needsUpdate = true;
 
   // update metadata

@@ -102,11 +102,60 @@ function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
 }
 
 class MeshStructure {
-  constructor(mesh, geo, name, polyscopeEnvironment) {
+  constructor(mesh, geo, nV, faces, name, polyscopeEnvironment) {
     this.mesh = mesh;
     this.geo = geo;
+    this.nV = nV;
+    this.faces = faces;
     this.name = name;
     this.ps = polyscopeEnvironment;
+  }
+
+  computeSmoothNormals() {
+    // TODO: handle non-triangular face
+    let V = this.nV;
+    let F = this.faces.size();
+    let vertexNormals = new Float32Array(V * 3);
+    for (let iV = 0; iV < V; ++iV) {
+      vertexNormals[3 * iV + 0] = 0;
+      vertexNormals[3 * iV + 1] = 0;
+      vertexNormals[3 * iV + 2] = 0;
+    }
+
+    const currNormals = this.mesh.geometry.attributes.normal.array;
+    for (let iF = 0; iF < F; iF++) {
+      let face = this.faces.get(iF);
+      for (let iV = 0; iV < 3; iV++) {
+        let v = face.get(iV);
+        for (let iD = 0; iD < 3; ++iD) {
+          vertexNormals[3 * v + iD] += currNormals[3 * 3 * iF + 3 * iV + iD];
+        }
+      }
+    }
+
+    for (let iV = 0; iV < V; ++iV) {
+      let n = new THREE.Vector3(
+        vertexNormals[3 * iV + 0],
+        vertexNormals[3 * iV + 1],
+        vertexNormals[3 * iV + 2]
+      );
+      n.normalize();
+      vertexNormals[3 * iV + 0] = n.x;
+      vertexNormals[3 * iV + 1] = n.y;
+      vertexNormals[3 * iV + 2] = n.z;
+    }
+
+    let normals = new Float32Array(F * 3 * 3);
+    for (let iF = 0; iF < F; iF++) {
+      let face = this.faces.get(iF);
+      for (let iV = 0; iV < 3; iV++) {
+        for (let iD = 0; iD < 3; ++iD) {
+          normals[3 * 3 * iF + 3 * iV + iD] =
+            vertexNormals[3 * face.get(iV) + iD];
+        }
+      }
+    }
+    return normals;
   }
 
   setColor(color) {
@@ -161,7 +210,6 @@ class Polyscope {
 
   // must be called after onload
   initInput() {
-    console.log("hi");
     let inputContainer = document.createElement("div");
     this.input = document.createElement("input");
     inputContainer.appendChild(this.input);
@@ -169,7 +217,6 @@ class Polyscope {
     this.input.id = "fileInput";
     this.input.style.display = "none";
     this.input.type = "file";
-    console.log(this.input);
   }
 
   init() {
@@ -233,9 +280,7 @@ class Polyscope {
 
   toggleWireframe(checked, structure) {
     if (checked) {
-      console.log(structure.mesh.material.uniforms);
       structure.mesh.material.uniforms.edgeWidth.value = 1;
-      console.log(structure.mesh.material.uniforms);
     } else {
       structure.mesh.material.uniforms.edgeWidth.value = 0;
     }
@@ -280,7 +325,14 @@ class Polyscope {
       scale
     );
 
-    let meshStructure = new MeshStructure(threeMesh, threeGeometry, name, this);
+    let meshStructure = new MeshStructure(
+      threeMesh,
+      threeGeometry,
+      vertexCoordinates.size(),
+      faces,
+      name,
+      this
+    );
     this.structures[name] = meshStructure;
 
     let meshGui = this.structureGuiMeshes.addFolder(name);
@@ -326,6 +378,8 @@ class Polyscope {
       this.structureGuiFields[name + "#Color"]
     );
 
+    this.setMeshSmoothShading(meshStructure, true);
+
     this.scene.add(threeMesh);
 
     return meshStructure;
@@ -340,7 +394,15 @@ class Polyscope {
   }
 
   setMeshSmoothShading(mesh, shadeSmooth) {
-    mesh.mesh.material.uniforms.shadeSmooth = shadeSmooth;
+    if (shadeSmooth) {
+      mesh.mesh.geometry.setAttribute(
+        "normal",
+        new THREE.BufferAttribute(mesh.computeSmoothNormals(), 3)
+      );
+    } else {
+      mesh.mesh.geometry.computeVertexNormals();
+    }
+    mesh.mesh.geometry.attributes.normal.needsUpdate = true;
   }
 
   deregisterSurfaceMesh(name) {
@@ -371,7 +433,6 @@ class Polyscope {
     for (let iF = 0; iF < F; iF++) {
       let face = faces.get(iF);
       for (let iV = 0; iV < 3; iV++) {
-        // console.log(iV, face.get(iV), coords.get(face.get(iV)));
         for (let iD = 0; iD < 3; ++iD) {
           positions[3 * 3 * iF + 3 * iV + iD] = coords.get(face.get(iV))[iD];
           barycoords[3 * 3 * iF + 3 * iV + iD] = iD == iV ? 1 : 0;
