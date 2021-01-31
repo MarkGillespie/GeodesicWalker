@@ -1,14 +1,14 @@
 // https://stackoverflow.com/a/34452130
-dat.GUI.prototype.removeFolder = function(name) {
-    var folder = this.__folders[name];
-    if (!folder) {
-        return;
-    }
-    folder.close();
-    this.__ul.removeChild(folder.domElement.parentNode);
-    delete this.__folders[name];
-    this.onResize();
-}
+dat.GUI.prototype.removeFolder = function (name) {
+  var folder = this.__folders[name];
+  if (!folder) {
+    return;
+  }
+  folder.close();
+  this.__ul.removeChild(folder.domElement.parentNode);
+  delete this.__folders[name];
+  this.onResize();
+};
 
 function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
   let vertexShader = `
@@ -120,6 +120,7 @@ class Polyscope {
 
   init() {
     this.container = document.createElement("div");
+    this.container.classList.add("container");
     document.body.appendChild(this.container);
 
     this.initRenderer(this.container);
@@ -256,10 +257,10 @@ class Polyscope {
     delete this.structures[name];
   }
 
-    clearAllStructures() {
-      let names = Object.keys(this.structures);
-      names.forEach((name) => {
-        this.deregisterSurfaceMesh(name);
+  clearAllStructures() {
+    let names = Object.keys(this.structures);
+    names.forEach((name) => {
+      this.deregisterSurfaceMesh(name);
     });
   }
 
@@ -338,7 +339,13 @@ class Polyscope {
   }
 
   addEventListeners() {
-    window.addEventListener("resize", this.onWindowResize, false);
+    window.addEventListener(
+      "resize",
+      () => {
+        this.onWindowResize();
+      },
+      false
+    );
   }
 
   onWindowResize() {
