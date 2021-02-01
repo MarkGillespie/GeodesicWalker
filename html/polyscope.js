@@ -651,6 +651,11 @@ class Polyscope {
       })
       .listen()
       .name("Color");
+
+    this.updateCurveNetworkColor(
+      curveStructure,
+      this.structureGuiFields[name + "#Color"]
+    );
     curveGui.open();
 
     this.scene.add(threeMesh);
