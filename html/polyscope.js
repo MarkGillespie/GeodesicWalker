@@ -195,12 +195,26 @@ function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
 }
 
 class CurveNetworkStructure {
-  constructor(mesh, geo, name, polyscopeEnvironment) {
+  constructor(mesh, geo, maxLen, name, polyscopeEnvironment) {
     this.mesh = mesh;
     this.geo = geo;
+    this.maxLen = maxLen;
     this.name = name;
     this.ps = polyscopeEnvironment;
     this.quantities = {};
+  }
+
+  updateVertexPositions(newPositions) {
+    const positions = this.mesh.geometry.attributes.position.array;
+
+    // update the position buffer
+    for (let iV = 0; iV < Math.min(this.maxLen, newPositions.length); iV++) {
+      for (let iD = 0; iD < 3; ++iD) {
+        positions[3 * iV + iD] = newPositions[iV][iD];
+      }
+    }
+
+    this.mesh.geometry.attributes.position.needsUpdate = true;
   }
 }
 
@@ -334,6 +348,7 @@ class Polyscope {
     this.structureGui = undefined;
     this.structureGuiFields = {};
     this.structureGuiMeshes = undefined;
+    this.structureCurveNetworks = undefined;
 
     this.commandGui = undefined;
     this.commandGuiFields = {
@@ -532,6 +547,82 @@ class Polyscope {
     return meshStructure;
   }
 
+  registerCurveNetwork(name, vertexCoordinates, edges) {
+    if (!this.structureGuiCurveNetworks) {
+      this.structureGuiCurveNetworks = this.structureGui.addFolder(
+        "Curve Networks"
+      );
+      this.structureGuiCurveNetworks.open();
+    }
+
+    if (!edges) {
+      edges = [];
+      for (let iV = 0; iV + 1 < vertexCoordinates.length; iV++) {
+        edges.push([iV, iV + 1]);
+      }
+    }
+
+    // TODO: allocate extra space?
+    let maxLen = vertexCoordinates.length;
+
+    // create THREE.js mesh (and geometry) objects
+    let [threeMesh, threeGeometry] = this.constructPolyscopeCurveNetwork(
+      vertexCoordinates,
+      edges,
+      maxLen
+    );
+
+    let curveStructure = new CurveNetworkStructure(
+      threeMesh,
+      threeGeometry,
+      maxLen,
+      name,
+      this
+    );
+    this.structures[name] = curveStructure;
+
+    let curveGui = this.structureGuiCurveNetworks.addFolder(name);
+
+    this.structureGuiFields[name + "#Enabled"] = true;
+    curveGui
+      .add(this.structureGuiFields, name + "#Enabled")
+      .onChange((c) => {
+        this.setMeshEnabled(curveStructure, c);
+      })
+      .listen()
+      .name("Enabled");
+
+    this.structureGuiFields[name + "#Color"] = getNextUniqueColor();
+    curveGui
+      .addColor(this.structureGuiFields, name + "#Color")
+      .onChange((c) => {
+        this.updateMeshColor(curveStructure, c);
+      })
+      .listen()
+      .name("Color");
+    curveGui.open();
+
+    this.structureGuiFields[name + "#Edge Color"] = [0, 0, 0];
+    curveGui
+      .addColor(this.structureGuiFields, name + "#Edge Color")
+      .onChange((c) => {
+        this.updateMeshEdgeColor(curveStructure, c);
+      })
+      .listen()
+      .name("Edge Color");
+
+    // this.updateMeshColor(
+    //   curveStructure,
+    //   this.structureGuiFields[name + "#Color"]
+    // );
+
+    // this.setMeshSmoothShading(curveStructure, true);
+
+    this.scene.add(threeMesh);
+
+    return curveStructure;
+  }
+
   setMeshEnabled(mesh, enabled) {
     if (enabled) {
       this.scene.add(this.structures[mesh.name].mesh);
@@ -620,7 +711,7 @@ class Polyscope {
     meshStructure.mesh.material.uniforms.edgeColor.value = c;
   }
 
-  constructCurveNetwork(vertices, segments, maxLen) {
+  constructPolyscopeCurveNetwork(vertices, segments, maxLen) {
     // create geometry object
     let threeGeometry = new THREE.BufferGeometry();
 
@@ -645,10 +736,14 @@ class Polyscope {
     threeGeometry.setIndex(new THREE.BufferAttribute(indices, 1));
 
     // create line material
-    let lineMaterial = new THREE.LineBasicMaterial({ color: 0xff00ff });
+    let lineMaterial = new THREE.LineBasicMaterial({
+      color: 0xff00ff,
+    });
+
+    console.log(lineMaterial);
 
     // create mesh
-    let threeMesh = new THREE.Mesh(threeGeometry, matcapMaterial);
+    let threeMesh = new THREE.LineSegments(threeGeometry, lineMaterial);
     return [threeMesh, threeGeometry];
   }
 

@@ -2,9 +2,12 @@ let mesh = undefined;
 let geo = undefined;
 let walkerSurfacePoint = undefined;
 let walkerDirection = [1, 0];
+let trajectoryLength = 2500;
+let trajectory = [];
 
 let psBaseMesh = undefined;
 let psWalkerMesh = undefined;
+let psTrajectory = undefined;
 
 function vec3ToTHREE(v) {
   return new THREE.Vector3(v[0], v[1], v[2]);
@@ -14,6 +17,10 @@ polyscope.onMeshLoad = (text) => {
   mesh = Module.readMesh(text, "obj");
   geo = Module.readGeo(mesh, text, "obj");
   walkerSurfacePoint = Module.getStartingPoint(geo);
+
+  let stepResult = Module.takeStep(walkerDirection, walkerSurfacePoint, geo, 1);
+  let startingPos = stepResult.pos;
+  trajectory = Array(trajectoryLength).fill(startingPos);
 
   // remove any previously loaded mesh from scene
   polyscope.clearAllStructures();
@@ -32,6 +39,8 @@ polyscope.onMeshLoad = (text) => {
     geo.vertexCoordinates(),
     mesh.polygons()
   );
+
+  psTrajectory = polyscope.registerCurveNetwork("path", trajectory);
 
   // Translate walker up to walk along surface, and scale it down
   // fill position buffer
@@ -85,6 +94,11 @@ polyscope.userCallback = () => {
       );
 
     psWalkerMesh.setOrientationFromMatrix(mat);
+
+    // update trajectory
+    trajectory.shift(); // drop oldest element
+    trajectory.push(stepResult.pos);
+    psTrajectory.updateVertexPositions(trajectory);
   }
 };
 
