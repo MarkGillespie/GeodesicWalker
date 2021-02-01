@@ -1,3 +1,6 @@
+import * as THREE from "https://unpkg.com/three@0.125.1/build/three.module.js";
+import { TrackballControls } from "https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js";
+
 // polyscope/color_management.cpp
 // Clamp to [0,1]
 function unitClamp(x) {
@@ -291,7 +294,7 @@ class MeshStructure {
       this.mesh.rotation.y,
       this.mesh.rotation.z
     );
-    psWalkerMesh.mesh.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
+    this.mesh.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
     let oldPos = this.mesh.position;
     this.mesh.translateX(pos.x - oldPos.x, 1);
     this.mesh.translateY(pos.y - oldPos.y, 1);
@@ -302,7 +305,7 @@ class MeshStructure {
   }
 
   setOrientationFromMatrix(mat) {
-    psWalkerMesh.mesh.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
+    this.mesh.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
     this.mesh.setRotationFromMatrix(mat);
   }
 
@@ -373,7 +376,35 @@ class Polyscope {
     this.input.type = "file";
   }
 
+  // Must call after window is loaded
   init() {
+    this.initInput();
+    this.input.addEventListener("change", function (e) {
+      // remove any previously loaded mesh from scene
+      this.clearAllStructures();
+
+      // show spinner
+      document.getElementById("spinner").style.display = "inline-block";
+
+      let file = this.input.files[0];
+      let filename = file.name;
+
+      if (filename.endsWith(".obj")) {
+        let reader = new FileReader();
+        reader.onload = function (e) {
+          this.onMeshLoad(reader.result);
+        };
+
+        reader.onerror = function (e) {
+          alert("Unable to load OBJ file");
+        };
+
+        reader.readAsText(file);
+      } else {
+        alert("Please load an OBJ file");
+      }
+    });
+
     this.container = document.createElement("div");
     this.container.classList.add("container");
     document.body.appendChild(this.container);
@@ -748,7 +779,7 @@ class Polyscope {
   }
 
   initControls() {
-    this.controls = new THREE.TrackballControls(
+    this.controls = new TrackballControls(
       this.camera,
       this.renderer.domElement
     );
@@ -779,7 +810,7 @@ class Polyscope {
       this.animate();
     });
     this.userCallback();
-    this.controls.update();
+    if (this.controls) this.controls.update();
     this.render();
   }
 
@@ -796,38 +827,6 @@ class Polyscope {
 
 let polyscope = new Polyscope();
 
-window.onload = function () {
-  polyscope.initInput();
-  console.log("adding event listener");
-  polyscope.input.addEventListener("change", function (e) {
-    console.log("picked new file");
-
-    // remove any previously loaded mesh from scene
-    polyscope.clearAllStructures();
-
-    // show spinner
-    document.getElementById("spinner").style.display = "inline-block";
-
-    let file = polyscope.input.files[0];
-    let filename = file.name;
-
-    if (filename.endsWith(".obj")) {
-      console.log("reading obj file");
-      let reader = new FileReader();
-      reader.onload = function (e) {
-        console.log("read input file");
-        polyscope.onMeshLoad(reader.result);
-      };
-
-      reader.onerror = function (e) {
-        alert("Unable to load OBJ file");
-      };
-
-      reader.readAsText(file);
-    } else {
-      alert("Please load an OBJ file");
-    }
-  });
-};
-
 if (!Detector.webgl) Detector.addGetWebGLMessage();
+
+export { polyscope };

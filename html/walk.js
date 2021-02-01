@@ -1,3 +1,6 @@
+import * as THREE from "https://unpkg.com/three@0.125.1/build/three.module.js";
+import { polyscope } from "./polyscope.js";
+
 let mesh = undefined;
 let geo = undefined;
 let walkerSurfacePoint = undefined;
@@ -102,8 +105,15 @@ polyscope.userCallback = () => {
   }
 };
 
-// Initialize only after wasm is loaded
+// Initialize only after wasm is loaded and page has also loaded
 Module.onRuntimeInitialized = (_) => {
-  polyscope.init();
-  polyscope.animate();
+  if (document.readyState === "complete") {
+    polyscope.init();
+    polyscope.animate();
+  } else {
+    window.onload = () => {
+      polyscope.init();
+      polyscope.animate();
+    };
+  }
 };
