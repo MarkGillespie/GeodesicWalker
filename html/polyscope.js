@@ -353,7 +353,8 @@ class Polyscope {
     this.scene = undefined;
     this.matcapTextures = undefined;
 
-    this.structures = {};
+    this.surfaceMeshes = {};
+    this.curveNetworks = {};
 
     this.mesh = undefined;
     this.geo = undefined;
@@ -400,18 +401,18 @@ class Polyscope {
     this.initInput();
     this.input.addEventListener("change", function (e) {
       // remove any previously loaded mesh from scene
-      this.clearAllStructures();
+      polyscope.clearAllStructures();
 
       // show spinner
       document.getElementById("spinner").style.display = "inline-block";
 
-      let file = this.input.files[0];
+      let file = polyscope.input.files[0];
       let filename = file.name;
 
       if (filename.endsWith(".obj")) {
         let reader = new FileReader();
         reader.onload = function (e) {
-          this.onMeshLoad(reader.result);
+          polyscope.onMeshLoad(reader.result);
         };
 
         reader.onerror = function (e) {
@@ -533,7 +534,7 @@ class Polyscope {
       name,
       this
     );
-    this.structures[name] = meshStructure;
+    this.surfaceMeshes[name] = meshStructure;
 
     let meshGui = this.structureGuiMeshes.addFolder(name);
 
@@ -630,7 +631,7 @@ class Polyscope {
       name,
       this
     );
-    this.structures[name] = curveStructure;
+    this.curveNetworks[name] = curveStructure;
 
     let curveGui = this.structureGuiCurveNetworks.addFolder(name);
 
@@ -660,9 +661,9 @@ class Polyscope {
 
   setMeshEnabled(mesh, enabled) {
     if (enabled) {
-      this.scene.add(this.structures[mesh.name].mesh);
+      this.scene.add(mesh.mesh);
     } else {
-      this.scene.remove(this.structures[mesh.name].mesh);
+      this.scene.remove(mesh.mesh);
     }
   }
 
@@ -679,17 +680,29 @@ class Polyscope {
   }
 
   deregisterSurfaceMesh(name) {
-    if (!(name in this.structures)) return;
+    if (!(name in this.surfaceMeshes)) return;
 
     this.structureGuiMeshes.removeFolder(name);
-    this.scene.remove(this.structures[name].mesh);
-    delete this.structures[name];
+    this.scene.remove(this.surfaceMeshes[name].mesh);
+    delete this.surfaceMeshes[name];
+  }
+
+  deregisterCurveNetwork(name) {
+    if (!(name in this.curveNetworks)) return;
+
+    this.structureGuiCurveNetworks.removeFolder(name);
+    this.scene.remove(this.curveNetworks[name].mesh);
+    delete this.curveNetworks[name];
   }
 
   clearAllStructures() {
-    let names = Object.keys(this.structures);
+    let names = Object.keys(this.surfaceMeshes);
     names.forEach((name) => {
       this.deregisterSurfaceMesh(name);
+    });
+    names = Object.keys(this.curveNetworks);
+    names.forEach((name) => {
+      this.deregisterCurveNetwork(name);
     });
   }
 
