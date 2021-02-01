@@ -1,13 +1,9 @@
 import * as THREE from "https://unpkg.com/three@0.125.1/build/three.module.js";
 import { TrackballControls } from "https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js";
 import { WEBGL } from "https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js";
-import { Line2 } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/Line2.js";
 import { LineSegments2 } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineSegments2.js";
 import { LineMaterial } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineMaterial.js";
 import { LineSegmentsGeometry } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineSegmentsGeometry.js";
-import { LineGeometry } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineGeometry.js";
-import { GeometryUtils } from "https://unpkg.com/three@0.125.1/examples/jsm/utils/GeometryUtils.js";
-// import { GeometryUtils } from "./jsm/utils/GeometryUtils.js";
 
 // polyscope/color_management.cpp
 // Clamp to [0,1]
