@@ -1,105 +1,10 @@
 import * as THREE from "https://unpkg.com/three@0.125.1/build/three.module.js";
 import { TrackballControls } from "https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js";
 import { WEBGL } from "https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js";
-import { LineSegments2 } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineSegments2.js";
-import { LineMaterial } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineMaterial.js";
-import { LineSegmentsGeometry } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineSegmentsGeometry.js";
 
-// polyscope/color_management.cpp
-// Clamp to [0,1]
-function unitClamp(x) {
-  return Math.max(0, Math.min(1, x));
-}
-function unitClamp3(x) {
-  return [unitClamp(x[0]), unitClamp(x[1]), unitClamp(x[2])];
-}
-
-// Used to sample colors. Samples a series of most-distant values from a range [0,1]
-// offset from a starting value 'start' and wrapped around. index=0 returns start
-//
-// Example: if start = 0, emits f(0, i) = {0, 1/2, 1/4, 3/4, 1/8, 5/8, 3/8, 7/8, ...}
-//          if start = 0.3 emits (0.3 + f(0, i)) % 1
-function getIndexedDistinctValue(start, index) {
-  if (index < 0) {
-    return 0.0;
-  }
-
-  // Bit shifty magic to evaluate f()
-  let val = 0;
-  let p = 0.5;
-  while (index > 0) {
-    if (index % 2 == 1) {
-      val += p;
-    }
-    index = index / 2;
-    p /= 2.0;
-  }
-
-  // Apply modular offset
-  val = (val + start) % 1.0;
-
-  return unitClamp(val);
-}
-
-/**
- * https://axonflux.com/handy-rgb-to-hsl-and-rgb-to-hsv-color-model-c
- * Converts an HSV color value to RGB. Conversion formula
- * adapted from http://en.wikipedia.org/wiki/HSV_color_space.
- * Assumes h, s, and v are contained in the set [0, 1] and
- * returns r, g, and b in the set [0, 255].
- *
- * @param   Number  h       The hue
- * @param   Number  s       The saturation
- * @param   Number  v       The value
- * @return  Array           The RGB representation
- */
-function hsvToRgb(h, s, v) {
-  let r, g, b;
-
-  let i = Math.floor(h * 6);
-  let f = h * 6 - i;
-  let p = v * (1 - s);
-  let q = v * (1 - f * s);
-  let t = v * (1 - (1 - f) * s);
-
-  switch (i % 6) {
-    case 0:
-      (r = v), (g = t), (b = p);
-      break;
-    case 1:
-      (r = q), (g = v), (b = p);
-      break;
-    case 2:
-      (r = p), (g = v), (b = t);
-      break;
-    case 3:
-      (r = p), (g = q), (b = v);
-      break;
-    case 4:
-      (r = t), (g = p), (b = v);
-      break;
-    case 5:
-      (r = v), (g = p), (b = q);
-      break;
-  }
-
-  return [r * 255, g * 255, b * 255];
-}
-
-// Get an indexed offset color. Inputs and outputs in RGB
-function indexOffsetHue(baseHSV, index) {
-  let newHue = getIndexedDistinctValue(baseHSV[0], index);
-  return hsvToRgb(newHue, baseHSV[1], baseHSV[2]);
-}
-
-// Keep track of unique structure colors
-// let uniqueColorBaseRGB = [28 / 255, 99 / 255, 227 / 255];
-let uniqueColorBaseHSV = [219 / 360, 75 / 100, 90 / 100];
-let iUniqueColor = 0;
-
-function getNextUniqueColor() {
-  return indexOffsetHue(uniqueColorBaseHSV, iUniqueColor++);
-}
+import { SurfaceMesh } from "./surface_mesh.js";
+import { CurveNetwork } from "./curve_network.js";
+import { getNextUniqueColor } from "./color_utils.js";
 
 // https://stackoverflow.com/a/34452130
 dat.GUI.prototype.removeFolder = function (name) {
@@ -112,234 +17,6 @@ dat.GUI.prototype.removeFolder = function (name) {
   delete this.__folders[name];
   this.onResize();
 };
-
-function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
-  let vertexShader = `
-        attribute vec3 barycoord;
-
-        varying vec2 Point;
-        varying vec3 Barycoord;
-
-        void main()
-        {
-            vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
-            vNormal = normalize(vNormal);
-
-            Point.x = vNormal.x * 0.5 + 0.5;
-            Point.y = vNormal.y * 0.5 + 0.5;
-
-            Barycoord = barycoord;
-
-            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-
-        }
-    `;
-
-  let fragmentShader = `
-        uniform sampler2D Matcap_r; // Matcap texture
-        uniform sampler2D Matcap_g; // Matcap texture
-        uniform sampler2D Matcap_b; // Matcap texture
-        uniform sampler2D Matcap_k; // Matcap texture
-        uniform vec3 color;
-        uniform vec3 edgeColor;
-        uniform float edgeWidth;
-
-        varying vec2 Point;
-        varying vec3 Barycoord;
-
-
-        float getEdgeFactor(vec3 UVW, vec3 edgeReal, float width) {
-
-            // The Nick Sharp Edge Function (tm). There are many like it, but this one is his.
-            float slopeWidth = 1.;
-
-            vec3 fw = fwidth(UVW);
-            vec3 realUVW = max(UVW, 1. - edgeReal.yzx);
-            vec3 baryWidth = slopeWidth * fw;
-
-            vec3 end = width * fw;
-            vec3 dist = smoothstep(end - baryWidth, end, realUVW);
-
-            float e = 1.0 - min(min(dist.x, dist.y), dist.z);
-            return e;
-        }
-
-        void main(void){
-
-
-            float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
-
-            vec4 mat_r = texture2D(Matcap_r, Point);
-            vec4 mat_g = texture2D(Matcap_g, Point);
-            vec4 mat_b = texture2D(Matcap_b, Point);
-            vec4 mat_k = texture2D(Matcap_k, Point);
-
-            vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b + 
-                                (1. - color.r - color.g - color.b) * mat_k;
-
-            vec4 edgeColorCombined = edgeColor.r * mat_r + edgeColor.g * mat_g + edgeColor.b * mat_b + 
-                                (1. - edgeColor.r - edgeColor.g - edgeColor.b) * mat_k;
-
-            gl_FragColor = (1.-alpha) * colorCombined + alpha * edgeColorCombined;
-        }
-    `;
-
-  let Material = new THREE.ShaderMaterial({
-    uniforms: {
-      Matcap_r: { value: tex_r },
-      Matcap_g: { value: tex_g },
-      Matcap_b: { value: tex_b },
-      Matcap_k: { value: tex_k },
-      color: { value: new THREE.Vector3(1, 0, 1) },
-      edgeColor: { value: new THREE.Vector3(0, 0, 0) },
-      edgeWidth: { value: 0 },
-    },
-    vertexShader,
-    fragmentShader,
-  });
-
-  return Material;
-}
-
-class CurveNetworkStructure {
-  constructor(mesh, geo, segments, maxLen, name, polyscopeEnvironment) {
-    this.mesh = mesh;
-    this.geo = geo;
-    this.segments = segments;
-    this.maxLen = maxLen;
-    this.name = name;
-    this.ps = polyscopeEnvironment;
-    this.quantities = {};
-  }
-
-  updateVertexPositions(newPositions) {
-    // fill position buffer
-    let positions = new Float32Array(this.segments.length * 2 * 3);
-    for (let iS = 0; iS < this.segments.length; iS++) {
-      for (let iV = 0; iV < 2; ++iV) {
-        for (let iD = 0; iD < 3; ++iD) {
-          positions[3 * 2 * iS + 3 * iV + iD] =
-            newPositions[this.segments[iS][iV]][iD];
-        }
-      }
-    }
-
-    this.mesh.geometry.setPositions(positions, 3);
-
-    this.mesh.geometry.attributes.instanceStart.needsUpdate = true;
-    this.mesh.geometry.attributes.instanceEnd.needsUpdate = true;
-  }
-
-  setColor(color) {
-    this.ps.structureGuiFields[this.name + "#Color"] = color;
-    this.ps.updateCurveNetworkColor(
-      this,
-      this.ps.structureGuiFields[this.name + "#Color"]
-    );
-  }
-}
-
-class MeshStructure {
-  constructor(mesh, geo, nV, faces, name, polyscopeEnvironment) {
-    this.mesh = mesh;
-    this.geo = geo;
-    this.nV = nV;
-    this.faces = faces;
-    this.name = name;
-    this.ps = polyscopeEnvironment;
-    this.quantities = {};
-  }
-
-  computeSmoothNormals() {
-    // TODO: handle non-triangular face
-    let V = this.nV;
-    let F = this.faces.size();
-    let vertexNormals = new Float32Array(V * 3);
-    for (let iV = 0; iV < V; ++iV) {
-      vertexNormals[3 * iV + 0] = 0;
-      vertexNormals[3 * iV + 1] = 0;
-      vertexNormals[3 * iV + 2] = 0;
-    }
-
-    const currNormals = this.mesh.geometry.attributes.normal.array;
-    for (let iF = 0; iF < F; iF++) {
-      let face = this.faces.get(iF);
-      for (let iV = 0; iV < 3; iV++) {
-        let v = face.get(iV);
-        for (let iD = 0; iD < 3; ++iD) {
-          vertexNormals[3 * v + iD] += currNormals[3 * 3 * iF + 3 * iV + iD];
-        }
-      }
-    }
-
-    for (let iV = 0; iV < V; ++iV) {
-      let n = new THREE.Vector3(
-        vertexNormals[3 * iV + 0],
-        vertexNormals[3 * iV + 1],
-        vertexNormals[3 * iV + 2]
-      );
-      n.normalize();
-      vertexNormals[3 * iV + 0] = n.x;
-      vertexNormals[3 * iV + 1] = n.y;
-      vertexNormals[3 * iV + 2] = n.z;
-    }
-
-    let normals = new Float32Array(F * 3 * 3);
-    for (let iF = 0; iF < F; iF++) {
-      let face = this.faces.get(iF);
-      for (let iV = 0; iV < 3; iV++) {
-        for (let iD = 0; iD < 3; ++iD) {
-          normals[3 * 3 * iF + 3 * iV + iD] =
-            vertexNormals[3 * face.get(iV) + iD];
-        }
-      }
-    }
-    return normals;
-  }
-
-  setColor(color) {
-    this.ps.structureGuiFields[this.name + "#Color"] = color;
-    this.ps.updateMeshColor(
-      this,
-      this.ps.structureGuiFields[this.name + "#Color"]
-    );
-  }
-
-  setPosition(pos) {
-    // First, undo the mesh's rotation so that we translate in the global coordinate frame
-    let oldRot = new THREE.Euler(
-      this.mesh.rotation.x,
-      this.mesh.rotation.y,
-      this.mesh.rotation.z
-    );
-    this.mesh.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
-    let oldPos = this.mesh.position;
-    this.mesh.translateX(pos.x - oldPos.x, 1);
-    this.mesh.translateY(pos.y - oldPos.y, 1);
-    this.mesh.translateZ(pos.z - oldPos.z, 1);
-
-    // After translating, we re-apply the old rotation
-    this.mesh.setRotationFromEuler(oldRot);
-  }
-
-  setOrientationFromMatrix(mat) {
-    this.mesh.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
-    this.mesh.setRotationFromMatrix(mat);
-  }
-
-  setOrientationFromFrame(T, N, B) {
-    let mat = new THREE.Matrix4();
-    // prettier-ignore
-    mat.set(
-          -T.x, N.x, -B.x, 0,
-          -T.y, N.y, -B.y, 0,
-          -T.z, N.z, -B.z, 0,
-          0,    0,   0,    1
-      );
-
-    this.setOrientationFromMatrix(mat);
-  }
-}
 
 class Polyscope {
   constructor() {
@@ -518,81 +195,15 @@ class Polyscope {
       this.structureGuiMeshes = this.structureGui.addFolder("Surface Meshes");
       this.structureGuiMeshes.open();
     }
-    // create THREE.js mesh (and geometry) objects
-    let [threeMesh, threeGeometry] = this.constructPolyscopeMesh(
-      vertexCoordinates,
-      faces,
-      scale
-    );
 
-    let meshStructure = new MeshStructure(
-      threeMesh,
-      threeGeometry,
-      vertexCoordinates.size(),
-      faces,
-      name,
-      this
-    );
+    let meshStructure = new SurfaceMesh(vertexCoordinates, faces, name, this);
     this.surfaceMeshes[name] = meshStructure;
 
     let meshGui = this.structureGuiMeshes.addFolder(name);
 
-    this.structureGuiFields[name + "#Enabled"] = true;
-    meshGui
-      .add(this.structureGuiFields, name + "#Enabled")
-      .onChange((c) => {
-        this.setMeshEnabled(meshStructure, c);
-      })
-      .listen()
-      .name("Enabled");
+    meshStructure.initGui(this.structureGuiFields, meshGui);
 
-    this.structureGuiFields[name + "#Smooth"] = true;
-    meshGui
-      .add(this.structureGuiFields, name + "#Smooth")
-      .onChange((c) => {
-        this.setMeshSmoothShading(meshStructure, c);
-      })
-      .listen()
-      .name("Smooth");
-
-    this.structureGuiFields[name + "#Color"] = getNextUniqueColor();
-    meshGui
-      .addColor(this.structureGuiFields, name + "#Color")
-      .onChange((c) => {
-        this.updateMeshColor(meshStructure, c);
-      })
-      .listen()
-      .name("Color");
-    this.structureGuiFields[name + "#Edge Width"] = 0;
-    meshGui
-      .add(this.structureGuiFields, name + "#Edge Width")
-      .min(0)
-      .max(2)
-      .step(0.05)
-      .onChange((width) => {
-        meshStructure.mesh.material.uniforms.edgeWidth.value = width;
-      })
-      .listen()
-      .name("Edge Width");
-    meshGui.open();
-
-    this.structureGuiFields[name + "#Edge Color"] = [0, 0, 0];
-    meshGui
-      .addColor(this.structureGuiFields, name + "#Edge Color")
-      .onChange((c) => {
-        this.updateMeshEdgeColor(meshStructure, c);
-      })
-      .listen()
-      .name("Edge Color");
-
-    this.updateMeshColor(
-      meshStructure,
-      this.structureGuiFields[name + "#Color"]
-    );
-
-    this.setMeshSmoothShading(meshStructure, true);
-
-    this.scene.add(threeMesh);
+    this.scene.add(meshStructure.mesh);
 
     return meshStructure;
   }
@@ -615,16 +226,8 @@ class Polyscope {
     // TODO: allocate extra space?
     let maxLen = vertexCoordinates.length;
 
-    // create THREE.js mesh (and geometry) objects
-    let [threeMesh, threeGeometry] = this.constructPolyscopeCurveNetwork(
+    let curveStructure = new CurveNetwork(
       vertexCoordinates,
-      edges,
-      maxLen
-    );
-
-    let curveStructure = new CurveNetworkStructure(
-      threeMesh,
-      threeGeometry,
       edges,
       maxLen,
       name,
@@ -633,60 +236,18 @@ class Polyscope {
     this.curveNetworks[name] = curveStructure;
 
     let curveGui = this.structureGuiCurveNetworks.addFolder(name);
+    curveStructure.initGui(this.structureGuiFields, curveGui);
 
-    this.structureGuiFields[name + "#Enabled"] = true;
-    curveGui
-      .add(this.structureGuiFields, name + "#Enabled")
-      .onChange((c) => {
-        this.setMeshEnabled(curveStructure, c);
-      })
-      .listen()
-      .name("Enabled");
-
-    this.structureGuiFields[name + "#Color"] = getNextUniqueColor();
-    curveGui
-      .addColor(this.structureGuiFields, name + "#Color")
-      .onChange((c) => {
-        this.updateCurveNetworkColor(curveStructure, c);
-      })
-      .listen()
-      .name("Color");
-
-    this.updateCurveNetworkColor(
-      curveStructure,
-      this.structureGuiFields[name + "#Color"]
-    );
-    curveGui.open();
-
-    this.scene.add(threeMesh);
+    this.scene.add(curveStructure.mesh);
 
     return curveStructure;
-  }
-
-  setMeshEnabled(mesh, enabled) {
-    if (enabled) {
-      this.scene.add(mesh.mesh);
-    } else {
-      this.scene.remove(mesh.mesh);
-    }
-  }
-
-  setMeshSmoothShading(mesh, shadeSmooth) {
-    if (shadeSmooth) {
-      mesh.mesh.geometry.setAttribute(
-        "normal",
-        new THREE.BufferAttribute(mesh.computeSmoothNormals(), 3)
-      );
-    } else {
-      mesh.mesh.geometry.computeVertexNormals();
-    }
-    mesh.mesh.geometry.attributes.normal.needsUpdate = true;
   }
 
   deregisterSurfaceMesh(name) {
     if (!(name in this.surfaceMeshes)) return;
 
     this.structureGuiMeshes.removeFolder(name);
+    this.surfaceMeshes[name].remove();
     this.scene.remove(this.surfaceMeshes[name].mesh);
     delete this.surfaceMeshes[name];
   }
@@ -695,7 +256,7 @@ class Polyscope {
     if (!(name in this.curveNetworks)) return;
 
     this.structureGuiCurveNetworks.removeFolder(name);
-    this.scene.remove(this.curveNetworks[name].mesh);
+    this.curveNetworks[name].remove();
     delete this.curveNetworks[name];
   }
 
@@ -708,93 +269,6 @@ class Polyscope {
     names.forEach((name) => {
       this.deregisterCurveNetwork(name);
     });
-  }
-
-  constructPolyscopeMesh(coords, faces, scale = 1) {
-    // create geometry object
-    let threeGeometry = new THREE.BufferGeometry();
-
-    // fill position and barycoord buffers
-    let F = faces.size();
-    let positions = new Float32Array(F * 3 * 3);
-    let normals = new Float32Array(F * 3 * 3);
-    let barycoords = new Float32Array(F * 3 * 3);
-    for (let iF = 0; iF < F; iF++) {
-      let face = faces.get(iF);
-      for (let iV = 0; iV < 3; iV++) {
-        for (let iD = 0; iD < 3; ++iD) {
-          positions[3 * 3 * iF + 3 * iV + iD] = coords.get(face.get(iV))[iD];
-          barycoords[3 * 3 * iF + 3 * iV + iD] = iD == iV ? 1 : 0;
-        }
-      }
-    }
-
-    threeGeometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(positions, 3)
-    );
-    threeGeometry.setAttribute(
-      "barycoord",
-      new THREE.BufferAttribute(barycoords, 3)
-    );
-    threeGeometry.computeVertexNormals();
-
-    // create matcap material
-    let matcapMaterial = createMatCapMaterial(
-      this.matcapTextures.r,
-      this.matcapTextures.g,
-      this.matcapTextures.b,
-      this.matcapTextures.k
-    );
-
-    // create mesh
-    let threeMesh = new THREE.Mesh(threeGeometry, matcapMaterial);
-    return [threeMesh, threeGeometry];
-  }
-
-  updateMeshColor(meshStructure, color) {
-    let c = new THREE.Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
-    meshStructure.mesh.material.uniforms.color.value = c;
-  }
-
-  updateMeshEdgeColor(meshStructure, color) {
-    let c = new THREE.Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
-    meshStructure.mesh.material.uniforms.edgeColor.value = c;
-  }
-
-  updateCurveNetworkColor(curveNetworkStructure, color) {
-    let c = new THREE.Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
-    curveNetworkStructure.mesh.material.color = c;
-  }
-
-  constructPolyscopeCurveNetwork(vertices, segments, maxLen) {
-    // create geometry object
-    let threeGeometry = new LineSegmentsGeometry();
-
-    // fill position and color buffers
-    let positions = new Float32Array(segments.length * 2 * 3);
-    for (let iS = 0; iS < segments.length; iS++) {
-      for (let iV = 0; iV < 2; ++iV) {
-        for (let iD = 0; iD < 3; ++iD) {
-          positions[3 * 2 * iS + 3 * iV + iD] = vertices[segments[iS][iV]][iD];
-        }
-      }
-    }
-
-    threeGeometry.setPositions(positions, 3);
-
-    // create line material
-    let lineMaterial = new LineMaterial({
-      color: 0xff00ff,
-      linewidth: 0.005,
-    });
-
-    // create mesh
-    let threeMesh = new LineSegments2(threeGeometry, lineMaterial);
-    // let threeMesh = new LineSegments2(threeGeometry);
-    threeMesh.computeLineDistances();
-    threeMesh.scale.set(1, 1, 1);
-    return [threeMesh, threeGeometry];
   }
 
   initControls() {
