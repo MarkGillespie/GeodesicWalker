@@ -1,9 +1,10 @@
 import { Vector3 } from "https://unpkg.com/three@0.125.1/build/three.module.js";
 
-import { getNextUniqueColor } from "./color_utils.js";
 import { LineSegments2 } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineSegments2.js";
 import { LineMaterial } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineMaterial.js";
 import { LineSegmentsGeometry } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineSegmentsGeometry.js";
+
+import { getNextUniqueColor } from "./color_utils.js";
 
 class CurveNetwork {
   constructor(vertices, segments, maxLen, name, polyscopeEnvironment) {
@@ -18,6 +19,9 @@ class CurveNetwork {
     this.maxLen = maxLen;
     this.name = name;
     this.quantities = {};
+
+    this.guiFields = undefined;
+    this.guiFolder = undefined;
   }
 
   setEnabled(enabled) {
@@ -30,6 +34,7 @@ class CurveNetwork {
 
   remove() {
     for (let q in this.quantities) {
+      this.ps.scene.remove(this.quantities[q].mesh);
       this.quantities[q].remove();
     }
     this.quantities = {};
@@ -59,6 +64,9 @@ class CurveNetwork {
   }
 
   initGui(guiFields, guiFolder) {
+    this.guiFields = guiFields;
+    this.guiFolder = guiFolder;
+
     guiFields[this.name + "#Enabled"] = true;
     guiFolder
       .add(guiFields, this.name + "#Enabled")

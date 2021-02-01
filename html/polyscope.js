@@ -257,6 +257,7 @@ class Polyscope {
 
     this.structureGuiCurveNetworks.removeFolder(name);
     this.curveNetworks[name].remove();
+    this.scene.remove(this.curveNetworks[name].mesh);
     delete this.curveNetworks[name];
   }
 

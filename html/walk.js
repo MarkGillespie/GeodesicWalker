@@ -17,7 +17,9 @@ function vec3ToTHREE(v) {
 }
 
 polyscope.onMeshLoad = (text) => {
+  console.log("reading mesh combinatorics");
   mesh = Module.readMesh(text, "obj");
+  console.log("reading mesh geometry");
   geo = Module.readGeo(mesh, text, "obj");
   walkerSurfacePoint = Module.getStartingPoint(geo);
 
@@ -42,6 +44,9 @@ polyscope.onMeshLoad = (text) => {
     geo.vertexCoordinates(),
     mesh.polygons()
   );
+
+  let fn = Array.from({ length: psBaseMesh.nV }, () => Math.random() * 10 - 5);
+  psBaseMesh.addVertexScalarQuantity("important function", fn);
 
   psTrajectory = polyscope.registerCurveNetwork("path", trajectory);
 
@@ -108,13 +113,19 @@ polyscope.userCallback = () => {
   }
 };
 
+let windowLoaded = false;
+window.onload = () => {
+  windowLoaded = true;
+};
 // Initialize only after wasm is loaded and page has also loaded
 Module.onRuntimeInitialized = (_) => {
-  if (document.readyState === "complete") {
+  if (windowLoaded) {
+    console.log("Window loaded first");
     polyscope.init();
     polyscope.animate();
   } else {
     window.onload = () => {
+      console.log("Module loaded first");
       polyscope.init();
       polyscope.animate();
     };

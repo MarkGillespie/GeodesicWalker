@@ -9,6 +9,7 @@ import {
 
 import { createMatCapMaterial } from "./shaders.js";
 import { getNextUniqueColor } from "./color_utils.js";
+import { VertexScalarQuantity } from "./scalar_quantity.js";
 
 class SurfaceMesh {
   constructor(coords, faces, name, polyscopeEnvironment) {
@@ -16,16 +17,29 @@ class SurfaceMesh {
     this.nV = coords.size();
     this.faces = faces;
     this.name = name;
-    this.enabled = this.ps.structureGuiFields[this.name + "#Enabled"];
+    this.enabled = true;
 
     // build three.js mesh
     [this.mesh, this.geo] = this.constructThreeMesh(coords, faces);
     this.quantities = {};
 
     this.setSmoothShading(true);
+
+    this.guiFields = undefined;
+    this.guiFolder = undefined;
+  }
+
+  addVertexScalarQuantity(name, values) {
+    this.quantities[name] = new VertexScalarQuantity(name, values, this);
+
+    let quantityGui = this.guiFolder.addFolder(name);
+    this.quantities[name].initGui(this.guiFields, quantityGui);
   }
 
   initGui(guiFields, guiFolder) {
+    this.guiFields = guiFields;
+    this.guiFolder = guiFolder;
+
     guiFields[this.name + "#Enabled"] = true;
     guiFolder
       .add(guiFields, this.name + "#Enabled")
@@ -106,8 +120,19 @@ class SurfaceMesh {
     }
   }
 
+  enableQuantity(q) {
+    this.ps.scene.remove(this.mesh);
+    this.ps.scene.add(q.mesh);
+  }
+
+  disableQuantity(q) {
+    this.ps.scene.remove(q.mesh);
+    this.ps.scene.add(this.mesh);
+  }
+
   remove() {
     for (let q in this.quantities) {
+      this.ps.scene.remove(this.quantities[q].mesh);
       this.quantities[q].remove();
     }
     this.quantities = {};
