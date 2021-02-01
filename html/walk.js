@@ -99,8 +99,11 @@ polyscope.userCallback = () => {
     psWalkerMesh.setOrientationFromMatrix(mat);
 
     // update trajectory
-    trajectory.shift(); // drop oldest element
-    trajectory.push(stepResult.pos);
+    for (let iP = 1; iP < stepResult.trajectory.size(); iP++) {
+      trajectory.shift(); // drop oldest element
+      let pos = stepResult.trajectory.get(iP);
+      trajectory.push([pos[0], pos[1], pos[2]]);
+    }
     psTrajectory.updateVertexPositions(trajectory);
   }
 };

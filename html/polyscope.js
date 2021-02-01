@@ -1,6 +1,13 @@
 import * as THREE from "https://unpkg.com/three@0.125.1/build/three.module.js";
 import { TrackballControls } from "https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js";
 import { WEBGL } from "https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js";
+import { Line2 } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/Line2.js";
+import { LineSegments2 } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineSegments2.js";
+import { LineMaterial } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineMaterial.js";
+import { LineSegmentsGeometry } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineSegmentsGeometry.js";
+import { LineGeometry } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineGeometry.js";
+import { GeometryUtils } from "https://unpkg.com/three@0.125.1/examples/jsm/utils/GeometryUtils.js";
+// import { GeometryUtils } from "./jsm/utils/GeometryUtils.js";
 
 // polyscope/color_management.cpp
 // Clamp to [0,1]
@@ -199,9 +206,10 @@ function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
 }
 
 class CurveNetworkStructure {
-  constructor(mesh, geo, maxLen, name, polyscopeEnvironment) {
+  constructor(mesh, geo, segments, maxLen, name, polyscopeEnvironment) {
     this.mesh = mesh;
     this.geo = geo;
+    this.segments = segments;
     this.maxLen = maxLen;
     this.name = name;
     this.ps = polyscopeEnvironment;
@@ -209,16 +217,30 @@ class CurveNetworkStructure {
   }
 
   updateVertexPositions(newPositions) {
-    const positions = this.mesh.geometry.attributes.position.array;
-
-    // update the position buffer
-    for (let iV = 0; iV < Math.min(this.maxLen, newPositions.length); iV++) {
-      for (let iD = 0; iD < 3; ++iD) {
-        positions[3 * iV + iD] = newPositions[iV][iD];
+    // fill position buffer
+    let positions = new Float32Array(this.segments.length * 2 * 3);
+    for (let iS = 0; iS < this.segments.length; iS++) {
+      for (let iV = 0; iV < 2; ++iV) {
+        for (let iD = 0; iD < 3; ++iD) {
+          positions[3 * 2 * iS + 3 * iV + iD] =
+            newPositions[this.segments[iS][iV]][iD];
+        }
       }
     }
 
-    this.mesh.geometry.attributes.position.needsUpdate = true;
+    this.mesh.geometry.setPositions(positions, 3);
+
+    // const positions = this.mesh.geometry.attributes.position.array;
+
+    // // update the position buffer
+    // for (let iV = 0; iV < Math.min(this.maxLen, newPositions.length); iV++) {
+    //   for (let iD = 0; iD < 3; ++iD) {
+    //     positions[3 * iV + iD] = newPositions[iV][iD];
+    //   }
+    // }
+
+    this.mesh.geometry.attributes.instanceStart.needsUpdate = true;
+    this.mesh.geometry.attributes.instanceEnd.needsUpdate = true;
   }
 }
 
@@ -607,6 +629,7 @@ class Polyscope {
     let curveStructure = new CurveNetworkStructure(
       threeMesh,
       threeGeometry,
+      edges,
       maxLen,
       name,
       this
@@ -633,22 +656,6 @@ class Polyscope {
       .listen()
       .name("Color");
     curveGui.open();
-
-    this.structureGuiFields[name + "#Edge Color"] = [0, 0, 0];
-    curveGui
-      .addColor(this.structureGuiFields, name + "#Edge Color")
-      .onChange((c) => {
-        this.updateMeshEdgeColor(curveStructure, c);
-      })
-      .listen()
-      .name("Edge Color");
-
-    // this.updateMeshColor(
-    //   curveStructure,
-    //   this.structureGuiFields[name + "#Color"]
-    // );
-
-    // this.setMeshSmoothShading(curveStructure, true);
 
     this.scene.add(threeMesh);
 
@@ -694,8 +701,7 @@ class Polyscope {
     // create geometry object
     let threeGeometry = new THREE.BufferGeometry();
 
-    // TODO: handle non-triangular face
-    // fill position and color buffers
+    // fill position and barycoord buffers
     let F = faces.size();
     let positions = new Float32Array(F * 3 * 3);
     let normals = new Float32Array(F * 3 * 3);
@@ -745,37 +751,31 @@ class Polyscope {
 
   constructPolyscopeCurveNetwork(vertices, segments, maxLen) {
     // create geometry object
-    let threeGeometry = new THREE.BufferGeometry();
+    let threeGeometry = new LineSegmentsGeometry();
 
     // fill position and color buffers
-    let positions = new Float32Array(vertices.length * 3);
-    for (let iV = 0; iV < vertices.length; iV++) {
-      for (let iD = 0; iD < 3; ++iD) {
-        positions[3 * iV + iD] = vertices[iV][iD];
+    let positions = new Float32Array(segments.length * 2 * 3);
+    for (let iS = 0; iS < segments.length; iS++) {
+      for (let iV = 0; iV < 2; ++iV) {
+        for (let iD = 0; iD < 3; ++iD) {
+          positions[3 * 2 * iS + 3 * iV + iD] = vertices[segments[iS][iV]][iD];
+        }
       }
     }
 
-    let indices = new Uint16Array(2 * segments.length);
-    for (let iS = 0; iS < segments.length; iS++) {
-      indices[2 * iS + 0] = segments[iS][0];
-      indices[2 * iS + 1] = segments[iS][1];
-    }
-
-    threeGeometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(positions, 3)
-    );
-    threeGeometry.setIndex(new THREE.BufferAttribute(indices, 1));
+    threeGeometry.setPositions(positions, 3);
 
     // create line material
-    let lineMaterial = new THREE.LineBasicMaterial({
+    let lineMaterial = new LineMaterial({
       color: 0xff00ff,
+      linewidth: 0.005,
     });
 
-    console.log(lineMaterial);
-
     // create mesh
-    let threeMesh = new THREE.LineSegments(threeGeometry, lineMaterial);
+    let threeMesh = new LineSegments2(threeGeometry, lineMaterial);
+    // let threeMesh = new LineSegments2(threeGeometry);
+    threeMesh.computeLineDistances();
+    threeMesh.scale.set(1, 1, 1);
     return [threeMesh, threeGeometry];
   }
 

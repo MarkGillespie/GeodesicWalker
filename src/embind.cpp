@@ -25,6 +25,7 @@ struct StepResult {
   Vector3 T, N, B, pos;
   Vector2 dir;
   SurfacePoint surfacePos;
+  std::vector<Vector3> trajectory;
 };
 
 // Stolen from Ricky Reusser https://observablehq.com/d/d0df0c04ce5c94FCC
@@ -47,7 +48,7 @@ StepResult takeStep(Vector2 direction, SurfacePoint pos,
                     VertexPositionGeometry &geo, double stepSize) {
   StepResult result;
 
-  std::vector<Vector3> stepTrajectory = step(direction, pos, geo, stepSize);
+  result.trajectory = step(direction, pos, geo, stepSize);
 
   result.pos = pos.interpolate(geo.inputVertexPositions);
   result.T = getExtrinsicDirection(direction, pos, geo).normalize();
@@ -118,7 +119,8 @@ EMSCRIPTEN_BINDINGS(my_module) {
       .field("B", &StepResult::B)
       .field("pos", &StepResult::pos)
       .field("dir", &StepResult::dir)
-      .field("surfacePos", &StepResult::surfacePos);
+      .field("surfacePos", &StepResult::surfacePos)
+      .field("trajectory", &StepResult::trajectory);
 
   function("getStartingPoint", &getStartingPoint);
   function("takeStep", &takeStep);
