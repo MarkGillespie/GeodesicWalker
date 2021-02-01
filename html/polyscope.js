@@ -1,5 +1,6 @@
 import * as THREE from "https://unpkg.com/three@0.125.1/build/three.module.js";
 import { TrackballControls } from "https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js";
+import { WEBGL } from "https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js";
 
 // polyscope/color_management.cpp
 // Clamp to [0,1]
@@ -827,6 +828,6 @@ class Polyscope {
 
 let polyscope = new Polyscope();
 
-if (!Detector.webgl) Detector.addGetWebGLMessage();
+if (!WEBGL.isWebGLAvailable()) alert(WEBGL.getWebGLErrorMessage());
 
 export { polyscope };
