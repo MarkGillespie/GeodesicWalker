@@ -106,9 +106,6 @@ dat.GUI.prototype.removeFolder = function (name) {
   this.onResize();
 };
 
-// https://github.com/mrdoob/three.js/issues/6117#issuecomment-75461347
-// Apparently passing in face normals is hard in WebGL, so people use this dFdx trick to compute face
-// normals in the shader
 function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
   let vertexShader = `
         attribute vec3 barycoord;
@@ -197,6 +194,16 @@ function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
   return Material;
 }
 
+class CurveNetworkStructure {
+  constructor(mesh, geo, name, polyscopeEnvironment) {
+    this.mesh = mesh;
+    this.geo = geo;
+    this.name = name;
+    this.ps = polyscopeEnvironment;
+    this.quantities = {};
+  }
+}
+
 class MeshStructure {
   constructor(mesh, geo, nV, faces, name, polyscopeEnvironment) {
     this.mesh = mesh;
@@ -205,6 +212,7 @@ class MeshStructure {
     this.faces = faces;
     this.name = name;
     this.ps = polyscopeEnvironment;
+    this.quantities = {};
   }
 
   computeSmoothNormals() {
@@ -373,10 +381,10 @@ class Polyscope {
       b: undefined,
       k: undefined,
     };
-    this.matcapTextures.r = new THREE.TextureLoader().load("img/clay_r.jpg");
-    this.matcapTextures.g = new THREE.TextureLoader().load("img/clay_g.jpg");
-    this.matcapTextures.b = new THREE.TextureLoader().load("img/clay_b.jpg");
-    this.matcapTextures.k = new THREE.TextureLoader().load("img/clay_k.jpg");
+    this.matcapTextures.r = new THREE.TextureLoader().load("img/clay_r.png");
+    this.matcapTextures.g = new THREE.TextureLoader().load("img/clay_g.png");
+    this.matcapTextures.b = new THREE.TextureLoader().load("img/clay_b.png");
+    this.matcapTextures.k = new THREE.TextureLoader().load("img/clay_k.png");
   }
 
   initRenderer(container) {
@@ -611,6 +619,39 @@ class Polyscope {
     let c = new THREE.Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
     meshStructure.mesh.material.uniforms.edgeColor.value = c;
   }
+
+  constructCurveNetwork(vertices, segments, maxLen) {
+    // create geometry object
+    let threeGeometry = new THREE.BufferGeometry();
+
+    // fill position and color buffers
+    let positions = new Float32Array(vertices.length * 3);
+    for (let iV = 0; iV < vertices.length; iV++) {
+      for (let iD = 0; iD < 3; ++iD) {
+        positions[3 * iV + iD] = vertices[iV][iD];
+      }
+    }
+
+    let indices = new Uint16Array(2 * segments.length);
+    for (let iS = 0; iS < segments.length; iS++) {
+      indices[2 * iS + 0] = segments[iS][0];
+      indices[2 * iS + 1] = segments[iS][1];
+    }
+
+    threeGeometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(positions, 3)
+    );
+    threeGeometry.setIndex(new THREE.BufferAttribute(indices, 1));
+
+    // create line material
+    let lineMaterial = new THREE.LineBasicMaterial({ color: 0xff00ff });
+
+    // create mesh
+    let threeMesh = new THREE.Mesh(threeGeometry, matcapMaterial);
+    return [threeMesh, threeGeometry];
+  }
+
   initControls() {
     this.controls = new THREE.TrackballControls(
       this.camera,
