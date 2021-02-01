@@ -226,17 +226,16 @@ class CurveNetworkStructure {
 
     this.mesh.geometry.setPositions(positions, 3);
 
-    // const positions = this.mesh.geometry.attributes.position.array;
-
-    // // update the position buffer
-    // for (let iV = 0; iV < Math.min(this.maxLen, newPositions.length); iV++) {
-    //   for (let iD = 0; iD < 3; ++iD) {
-    //     positions[3 * iV + iD] = newPositions[iV][iD];
-    //   }
-    // }
-
     this.mesh.geometry.attributes.instanceStart.needsUpdate = true;
     this.mesh.geometry.attributes.instanceEnd.needsUpdate = true;
+  }
+
+  setColor(color) {
+    this.ps.structureGuiFields[this.name + "#Color"] = color;
+    this.ps.updateCurveNetworkColor(
+      this,
+      this.ps.structureGuiFields[this.name + "#Color"]
+    );
   }
 }
 
@@ -648,7 +647,7 @@ class Polyscope {
     curveGui
       .addColor(this.structureGuiFields, name + "#Color")
       .onChange((c) => {
-        this.updateMeshColor(curveStructure, c);
+        this.updateCurveNetworkColor(curveStructure, c);
       })
       .listen()
       .name("Color");
@@ -756,6 +755,11 @@ class Polyscope {
   updateMeshEdgeColor(meshStructure, color) {
     let c = new THREE.Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
     meshStructure.mesh.material.uniforms.edgeColor.value = c;
+  }
+
+  updateCurveNetworkColor(curveNetworkStructure, color) {
+    let c = new THREE.Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
+    curveNetworkStructure.mesh.material.color = c;
   }
 
   constructPolyscopeCurveNetwork(vertices, segments, maxLen) {
