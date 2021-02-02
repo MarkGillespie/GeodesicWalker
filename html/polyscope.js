@@ -37,27 +37,13 @@ class Polyscope {
     this.mesh = undefined;
     this.geo = undefined;
 
-    this.walkerPosition = undefined;
-    this.walkerT = undefined;
-    this.walkerB = undefined;
-    this.walkerN = undefined;
-    this.walkerSurfacePoint = undefined;
-    this.walkerDirection = [1, 0];
-
-    this.filename = "bunny.obj";
-
     this.structureGui = undefined;
     this.structureGuiFields = {};
     this.structureGuiMeshes = undefined;
     this.structureCurveNetworks = undefined;
 
-    this.commandGui = undefined;
-    this.commandGuiFields = {
-      "Load Mesh": () => {
-        this.input.click();
-      },
-      Speed: 1,
-    };
+    this.commandGui = new dat.GUI();
+    this.commandGuiFields = {};
 
     this.onMeshLoad = (text) => {};
     this.userCallback = () => {};
@@ -117,9 +103,13 @@ class Polyscope {
     this.initCamera();
     this.initScene();
     this.initLights();
-    this.onMeshLoad(bunny);
     this.initControls();
     this.addEventListeners();
+  }
+
+  loadMesh(callback) {
+    this.onMeshLoad = callback;
+    this.input.click();
   }
 
   initMatcap() {
@@ -152,21 +142,6 @@ class Polyscope {
     document.body.appendChild(structureGuiWrapper);
     structureGuiWrapper.id = "structure-gui";
     structureGuiWrapper.appendChild(this.structureGui.domElement);
-
-    this.commandGui = new dat.GUI();
-    let io = this.commandGui.addFolder("IO");
-    io.add(this.commandGuiFields, "Load Mesh");
-    io.close();
-    this.commandGui
-      .add(this.commandGuiFields, "Speed")
-      .min(0)
-      .max(10)
-      .step(0.1);
-  }
-
-  updateDisplayText() {
-    let element = document.getElementById("meta");
-    element.textContent = "";
   }
 
   initCamera() {

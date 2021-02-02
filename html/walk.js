@@ -15,15 +15,28 @@ function vec3ToTHREE(v) {
   return new THREE.Vector3(v[0], v[1], v[2]);
 }
 
+// create polyscope manager
 let polyscope = new Polyscope();
 
-polyscope.onMeshLoad = (text) => {
+// Set up UI panel
+let io = polyscope.commandGui.addFolder("IO");
+polyscope.commandGuiFields["Load Mesh"] = function () {
+  polyscope.loadMesh(walkMesh);
+};
+io.add(polyscope.commandGuiFields, "Load Mesh");
+io.close();
+polyscope.commandGuiFields["Speed"] = 1;
+polyscope.commandGui
+  .add(polyscope.commandGuiFields, "Speed")
+  .min(0)
+  .max(10)
+  .step(0.1);
+
+function walkMesh(text) {
   polyscope.message("reading mesh ...");
   // give browser time to print the message
   setTimeout(() => {
     geo = Module.readMesh(text, "obj");
-    // polyscope.message("reading mesh geometry");
-    // geo = Module.readGeo(mesh, text, "obj");
     walkerSurfacePoint = Module.getStartingPoint(geo);
 
     let stepResult = Module.takeStep(
@@ -38,11 +51,7 @@ polyscope.onMeshLoad = (text) => {
     // remove any previously loaded mesh from scene
     polyscope.clearAllStructures();
 
-    polyscope.camera.aspect = window.innerWidth / window.innerHeight;
-    polyscope.camera.updateProjectionMatrix();
-
     polyscope.message("registering meshes with polyscope ...");
-    console.log("registering base mesh");
     setTimeout(() => {
       psBaseMesh = polyscope.registerSurfaceMesh(
         "Base Mesh",
@@ -92,7 +101,6 @@ polyscope.onMeshLoad = (text) => {
 
             // update metadata
             polyscope.message("Done");
-            polyscope.updateDisplayText();
 
             document.getElementById("spinner").style.display = "none";
           }, 1);
@@ -100,7 +108,7 @@ polyscope.onMeshLoad = (text) => {
       }, 1);
     }, 1);
   }, 1);
-};
+}
 
 polyscope.userCallback = () => {
   if (psWalkerMesh) {
@@ -143,10 +151,11 @@ polyscope.userCallback = () => {
   }
 };
 
-polyscope.message("waiting for module");
+polyscope.message("waiting for webassembly to load");
 Module.onRuntimeInitialized = (_) => {
-  polyscope.message("module loaded");
+  polyscope.message("webassembly loaded");
   // moduleInitialized = true;
   polyscope.init();
+  walkMesh(bunny);
   polyscope.animate();
 };
