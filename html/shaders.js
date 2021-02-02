@@ -3,6 +3,31 @@ import {
   Vector3,
 } from "https://unpkg.com/three@0.125.1/build/three.module.js";
 
+let common = `
+        float getEdgeFactor(vec3 UVW, vec3 edgeReal, float width) {
+
+            // The Nick Sharp Edge Function (tm). There are many like it, but this one is his.
+            float slopeWidth = 1.;
+
+            vec3 fw = fwidth(UVW);
+            vec3 realUVW = max(UVW, 1. - edgeReal.yzx);
+            vec3 baryWidth = slopeWidth * fw;
+
+            vec3 end = width * fw;
+            vec3 dist = smoothstep(end - baryWidth, end, realUVW);
+
+            float e = 1.0 - min(min(dist.x, dist.y), dist.z);
+            return e;
+        }
+
+
+        vec4 gammaCorrect( vec4 colorLinear )
+        {
+        const float screenGamma = 2.2;
+        return vec4(pow(colorLinear.rgb, vec3(1./screenGamma)), colorLinear.a);
+        }
+`;
+
 function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
   let vertexShader = `
         attribute vec3 barycoord;
@@ -37,37 +62,23 @@ function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
         varying vec2 Point;
         varying vec3 Barycoord;
 
-
-        float getEdgeFactor(vec3 UVW, vec3 edgeReal, float width) {
-
-            // The Nick Sharp Edge Function (tm). There are many like it, but this one is his.
-            float slopeWidth = 1.;
-
-            vec3 fw = fwidth(UVW);
-            vec3 realUVW = max(UVW, 1. - edgeReal.yzx);
-            vec3 baryWidth = slopeWidth * fw;
-
-            vec3 end = width * fw;
-            vec3 dist = smoothstep(end - baryWidth, end, realUVW);
-
-            float e = 1.0 - min(min(dist.x, dist.y), dist.z);
-            return e;
-        }
+        ${common}
 
         void main(void){
 
 
             float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
+            vec2 coord = Point * 0.95; // pull slightly inward, to reduce sampling artifacts near edges
 
-            vec4 mat_r = texture2D(Matcap_r, Point);
-            vec4 mat_g = texture2D(Matcap_g, Point);
-            vec4 mat_b = texture2D(Matcap_b, Point);
-            vec4 mat_k = texture2D(Matcap_k, Point);
+            vec4 mat_r = gammaCorrect(texture2D(Matcap_r, coord));
+            vec4 mat_g = gammaCorrect(texture2D(Matcap_g, coord));
+            vec4 mat_b = gammaCorrect(texture2D(Matcap_b, coord));
+            vec4 mat_k = gammaCorrect(texture2D(Matcap_k, coord));
 
-            vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b + 
+            vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b +
                                 (1. - color.r - color.g - color.b) * mat_k;
 
-            vec4 edgeColorCombined = edgeColor.r * mat_r + edgeColor.g * mat_g + edgeColor.b * mat_b + 
+            vec4 edgeColorCombined = edgeColor.r * mat_r + edgeColor.g * mat_g + edgeColor.b * mat_b +
                                 (1. - edgeColor.r - edgeColor.g - edgeColor.b) * mat_k;
 
             gl_FragColor = (1.-alpha) * colorCombined + alpha * edgeColorCombined;
@@ -128,37 +139,23 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
         varying vec3 Barycoord;
         varying vec3 Color;
 
-
-        float getEdgeFactor(vec3 UVW, vec3 edgeReal, float width) {
-
-            // The Nick Sharp Edge Function (tm). There are many like it, but this one is his.
-            float slopeWidth = 1.;
-
-            vec3 fw = fwidth(UVW);
-            vec3 realUVW = max(UVW, 1. - edgeReal.yzx);
-            vec3 baryWidth = slopeWidth * fw;
-
-            vec3 end = width * fw;
-            vec3 dist = smoothstep(end - baryWidth, end, realUVW);
-
-            float e = 1.0 - min(min(dist.x, dist.y), dist.z);
-            return e;
-        }
+        ${common}
 
         void main(void){
 
 
             float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
+            vec2 coord = Point * 0.95; // pull slightly inward, to reduce sampling artifacts near edges
 
-            vec4 mat_r = texture2D(Matcap_r, Point);
-            vec4 mat_g = texture2D(Matcap_g, Point);
-            vec4 mat_b = texture2D(Matcap_b, Point);
-            vec4 mat_k = texture2D(Matcap_k, Point);
+            vec4 mat_r = texture2D(Matcap_r, coord);
+            vec4 mat_g = texture2D(Matcap_g, coord);
+            vec4 mat_b = texture2D(Matcap_b, coord);
+            vec4 mat_k = texture2D(Matcap_k, coord);
 
-            vec4 colorCombined = Color.r * mat_r + Color.g * mat_g + Color.b * mat_b + 
+            vec4 colorCombined = Color.r * mat_r + Color.g * mat_g + Color.b * mat_b +
                                 (1. - Color.r - Color.g - Color.b) * mat_k;
 
-            vec4 edgeColorCombined = edgeColor.r * mat_r + edgeColor.g * mat_g + edgeColor.b * mat_b + 
+            vec4 edgeColorCombined = edgeColor.r * mat_r + edgeColor.g * mat_g + edgeColor.b * mat_b +
                                 (1. - edgeColor.r - edgeColor.g - edgeColor.b) * mat_k;
 
             gl_FragColor = (1.-alpha) * colorCombined + alpha * edgeColorCombined;

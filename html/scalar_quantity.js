@@ -3,10 +3,11 @@ import {
   BufferAttribute,
   Vector3,
   Mesh,
+  Color,
 } from "https://unpkg.com/three@0.125.1/build/three.module.js";
-import { Lut } from "https://unpkg.com/three@0.125.1/examples/jsm/math/Lut.js";
 
 import { createVertexScalarFunctionMaterial } from "./shaders.js";
+import { applyColorMap } from "./color_maps.js";
 
 function computeMinMax(values) {
   let min = values[0];
@@ -25,7 +26,7 @@ class VertexScalarQuantity {
     this.values = values;
     this.name = name;
     this.enabled = false;
-    this.lut = new Lut(); // "Look up table" for applying color maps
+
     [this.dataMin, this.dataMax] = computeMinMax(values);
 
     // build a three.js mesh to visualize the function
@@ -57,14 +58,15 @@ class VertexScalarQuantity {
       .listen()
       .name("Enabled");
 
-    guiFields[prefix + "#ColorMap"] = "rainbow";
+    guiFields[prefix + "#ColorMap"] = "viridis";
     this.applyColorMap(guiFields[prefix + "#ColorMap"]);
     guiFolder
       .add(guiFields, prefix + "#ColorMap", [
-        "rainbow",
-        "cooltowarm",
-        "blackbody",
-        "grayscale",
+        "viridis",
+        "coolwarm",
+        "plasma",
+        "magma",
+        "inferno",
       ])
       .onChange((cm) => {
         this.applyColorMap(cm);
@@ -90,10 +92,6 @@ class VertexScalarQuantity {
   }
 
   applyColorMap(cm) {
-    this.lut.setColorMap(cm);
-    this.lut.setMin(this.dataMin);
-    this.lut.setMax(this.dataMax);
-
     // update color buffer
     const colors = this.mesh.geometry.attributes.color.array;
 
@@ -102,7 +100,7 @@ class VertexScalarQuantity {
       let face = this.parent.faces.get(iF);
       for (let iV = 0; iV < 3; iV++) {
         let value = this.values[face.get(iV)];
-        let color = this.lut.getColor(value);
+        let color = applyColorMap(cm, value, this.dataMin, this.dataMax);
 
         colors[3 * 3 * iF + 3 * iV + 0] = color.r;
         colors[3 * 3 * iF + 3 * iV + 1] = color.g;

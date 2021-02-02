@@ -87,7 +87,7 @@ function indexOffsetHue(baseHSV, index) {
 
 // Keep track of unique structure colors
 // let uniqueColorBaseRGB = [28 / 255, 99 / 255, 227 / 255];
-let uniqueColorBaseHSV = [219 / 360, 75 / 100, 90 / 100];
+let uniqueColorBaseHSV = [219 / 360, 88 / 100, 89 / 100];
 let iUniqueColor = 0;
 
 function getNextUniqueColor() {

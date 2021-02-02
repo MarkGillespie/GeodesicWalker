@@ -63,7 +63,7 @@ class SurfaceMesh {
     guiFolder
       .addColor(guiFields, this.name + "#Color")
       .onChange((c) => {
-        this.setMeshColor(c);
+        this.setColor(c);
       })
       .listen()
       .name("Color");

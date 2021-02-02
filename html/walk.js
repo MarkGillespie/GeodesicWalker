@@ -45,7 +45,12 @@ polyscope.onMeshLoad = (text) => {
     mesh.polygons()
   );
 
-  let fn = Array.from({ length: psBaseMesh.nV }, () => Math.random() * 10 - 5);
+  let fn = [];
+  let coords = geo.vertexCoordinates();
+  for (let iV = 0; iV < coords.size(); iV++) {
+    fn.push(coords.get(iV)[2]);
+  }
+  // let fn = Array.from({ length: psBaseMesh.nV }, () => Math.random() * 10 - 5);
   psBaseMesh.addVertexScalarQuantity("important function", fn);
 
   psTrajectory = polyscope.registerCurveNetwork("path", trajectory);
@@ -115,10 +120,12 @@ polyscope.userCallback = () => {
 
 let windowLoaded = false;
 window.onload = () => {
+  console.log("window loaded");
   windowLoaded = true;
 };
 // Initialize only after wasm is loaded and page has also loaded
 Module.onRuntimeInitialized = (_) => {
+  console.log("module loaded");
   if (windowLoaded) {
     console.log("Window loaded first");
     polyscope.init();
