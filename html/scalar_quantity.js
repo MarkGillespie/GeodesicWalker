@@ -29,10 +29,6 @@ class VertexScalarQuantity {
 
     [this.dataMin, this.dataMax] = computeMinMax(values);
 
-    // build a three.js mesh to visualize the function
-    this.mesh = this.parent.mesh.clone();
-    this.initializeColorMap();
-
     // create a new mesh material
     let functionMaterial = createVertexScalarFunctionMaterial(
       this.ps.matcapTextures.r,
@@ -41,28 +37,29 @@ class VertexScalarQuantity {
       this.ps.matcapTextures.k
     );
 
-    this.mesh.material = functionMaterial;
+    // build a three.js mesh to visualize the function
+    this.mesh = new Mesh(this.parent.mesh.geometry.clone(), functionMaterial);
+    this.initializeColorMap();
+
     this.mesh.material.uniforms.edgeWidth = this.parent.mesh.material.uniforms.edgeWidth;
     this.mesh.material.uniforms.edgeColor = this.parent.mesh.material.uniforms.edgeColor;
-
-    this.quantities = {};
   }
 
   initGui(guiFields, guiFolder) {
-    let prefix = this.parent.name + "#" + this.name;
-    guiFields[prefix + "#Enabled"] = false;
+    this.prefix = this.parent.name + "#" + this.name;
+    guiFields[this.prefix + "#Enabled"] = false;
     guiFolder
-      .add(guiFields, prefix + "#Enabled")
+      .add(guiFields, this.prefix + "#Enabled")
       .onChange((e) => {
         this.setEnabled(e);
       })
       .listen()
       .name("Enabled");
 
-    guiFields[prefix + "#ColorMap"] = "viridis";
-    this.applyColorMap(guiFields[prefix + "#ColorMap"]);
+    guiFields[this.prefix + "#ColorMap"] = "viridis";
+    this.applyColorMap(guiFields[this.prefix + "#ColorMap"]);
     guiFolder
-      .add(guiFields, prefix + "#ColorMap", [
+      .add(guiFields, this.prefix + "#ColorMap", [
         "viridis",
         "coolwarm",
         "plasma",
@@ -79,6 +76,7 @@ class VertexScalarQuantity {
   }
 
   setEnabled(enabled) {
+    this.enabled = enabled;
     if (enabled) {
       this.parent.enableQuantity(this);
     } else {

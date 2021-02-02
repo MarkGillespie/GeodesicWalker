@@ -113,21 +113,49 @@ class SurfaceMesh {
   }
 
   setEnabled(enabled) {
+    this.enabled = enabled;
     if (enabled) {
-      this.ps.scene.add(this.mesh);
+      let enabledQuantity = false;
+      for (let q in this.quantities) {
+        if (this.quantities[q].enabled) {
+          this.ps.scene.add(this.quantities[q].mesh);
+          enabledQuantity = true;
+        }
+      }
+      if (!enabledQuantity) {
+        this.ps.scene.add(this.mesh);
+      }
     } else {
+      for (let q in this.quantities) {
+        this.ps.scene.remove(this.quantities[q].mesh);
+      }
       this.ps.scene.remove(this.mesh);
     }
   }
 
   enableQuantity(q) {
-    this.ps.scene.remove(this.mesh);
-    this.ps.scene.add(q.mesh);
+    for (let pName in this.quantities) {
+      if (pName != q.name) {
+        let p = this.quantities[pName];
+        this.guiFields[p.prefix + "#Enabled"] = false;
+        p.enabled = false;
+      }
+    }
+
+    if (this.enabled) {
+      this.ps.scene.remove(this.mesh);
+      for (let pName in this.quantities) {
+        this.ps.scene.remove(this.quantities[pName].mesh);
+      }
+      this.ps.scene.add(q.mesh);
+    }
   }
 
   disableQuantity(q) {
-    this.ps.scene.remove(q.mesh);
-    this.ps.scene.add(this.mesh);
+    if (this.enabled) {
+      this.ps.scene.remove(q.mesh);
+      this.ps.scene.add(this.mesh);
+    }
   }
 
   remove() {

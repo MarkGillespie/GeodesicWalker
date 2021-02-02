@@ -133,15 +133,17 @@ function walkMesh(text) {
 
       polyscope.message("constructing important function ...");
       setTimeout(() => {
-        let fn = [];
+        let y = [];
+        let z = [];
         let coords = geo.vertexCoordinates();
         for (let iV = 0; iV < coords.size(); iV++) {
-          fn.push(coords.get(iV)[2]);
+          y.push(coords.get(iV)[2]);
+          z.push(coords.get(iV)[1]);
         }
         polyscope.message("registering important function ...");
         setTimeout(() => {
-          // let fn = Array.from({ length: psBaseMesh.nV }, () => Math.random() * 10 - 5);
-          psBaseMesh.addVertexScalarQuantity("important function", fn);
+          psBaseMesh.addVertexScalarQuantity("y", y);
+          psBaseMesh.addVertexScalarQuantity("z", z);
 
           polyscope.message("registering trajectory ...");
           setTimeout(() => {
@@ -150,12 +152,13 @@ function walkMesh(text) {
             // update metadata
             polyscope.message("Done");
 
+            // turn off spinner
             document.getElementById("spinner").style.display = "none";
-          }, 1);
-        }, 1);
-      }, 1);
-    }, 1);
-  }, 1);
+          }, 0);
+        }, 0);
+      }, 0);
+    }, 0);
+  }, 0);
 }
 
 polyscope.userCallback = () => {
@@ -201,9 +204,16 @@ polyscope.userCallback = () => {
 
 polyscope.message("waiting for webassembly to load");
 Module.onRuntimeInitialized = (_) => {
+  // Once the wasm has loaded, we can start our app
   polyscope.message("webassembly loaded");
-  // moduleInitialized = true;
+
+  // Initialize polyscope
   polyscope.init();
+
+  // Load the meshes and set up our state
   walkMesh(bunny);
+
+  // Start animating with polyscope
+  // This will call polyscope.userCallback() every frame
   polyscope.animate();
 };
