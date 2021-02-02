@@ -74,7 +74,7 @@ if (EMSCRIPTEN)
   add_executable(embind "${SRCS}")
   target_include_directories(embind PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/" "${CMAKE_CURRENT_SOURCE_DIR}/deps/polyscope/deps/glm" "${CMAKE_CURRENT_SOURCE_DIR}/deps/polyscope/deps/args")
   target_link_libraries(embind geometry-central)
-  set_target_properties(embind PROPERTIES LINK_FLAGS "-s DEMANGLE_SUPPORT=1 -s ALLOW_MEMORY_GROWTH=1 --bind")
+  set_target_properties(embind PROPERTIES LINK_FLAGS "-s DEMANGLE_SUPPORT=1 -s ALLOW_MEMORY_GROWTH=1 --bind --memory-init-file 0")
 else()
   # only include polyscope for gui build
   add_subdirectory(deps/polyscope)

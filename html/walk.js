@@ -126,6 +126,7 @@ polyscope.userCallback = () => {
   }
 };
 
+console.log("waiting for module");
 Module.onRuntimeInitialized = (_) => {
   console.log("module loaded");
   // moduleInitialized = true;
