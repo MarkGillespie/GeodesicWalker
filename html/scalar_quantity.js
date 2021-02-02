@@ -43,6 +43,7 @@ class VertexScalarQuantity {
 
     this.mesh.material = functionMaterial;
     this.mesh.material.uniforms.edgeWidth = this.parent.mesh.material.uniforms.edgeWidth;
+    this.mesh.material.uniforms.edgeColor = this.parent.mesh.material.uniforms.edgeColor;
 
     this.quantities = {};
   }
