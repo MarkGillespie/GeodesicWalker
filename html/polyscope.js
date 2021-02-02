@@ -20,6 +20,8 @@ dat.GUI.prototype.removeFolder = function (name) {
 
 class Polyscope {
   constructor() {
+    if (!WEBGL.isWebGLAvailable()) alert(WEBGL.getWebGLErrorMessage());
+
     this.input = undefined;
 
     this.renderer = undefined;
@@ -320,7 +322,5 @@ class Polyscope {
 }
 
 let polyscope = new Polyscope();
-
-if (!WEBGL.isWebGLAvailable()) alert(WEBGL.getWebGLErrorMessage());
 
 export { polyscope };
