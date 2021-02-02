@@ -118,23 +118,25 @@ polyscope.userCallback = () => {
   }
 };
 
+// Initialize only after wasm is loaded and page has also loaded
 let windowLoaded = false;
+let moduleInitialized = false;
 window.onload = () => {
   console.log("window loaded");
   windowLoaded = true;
 };
-// Initialize only after wasm is loaded and page has also loaded
+
 Module.onRuntimeInitialized = (_) => {
   console.log("module loaded");
-  if (windowLoaded) {
-    console.log("Window loaded first");
+  moduleInitialized = true;
+};
+
+function setup() {
+  if (windowLoaded && moduleInitialized) {
     polyscope.init();
     polyscope.animate();
   } else {
-    window.onload = () => {
-      console.log("Module loaded first");
-      polyscope.init();
-      polyscope.animate();
-    };
+    requestAnimationFrame(setup);
   }
-};
+}
+setup();
