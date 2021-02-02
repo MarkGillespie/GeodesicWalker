@@ -325,6 +325,13 @@ class Polyscope {
     this.renderer.setScissorTest(true);
     this.renderer.render(this.scene, this.camera);
   }
+
+  message(str) {
+    let message = document.createElement("div");
+    let messageBuffer = document.getElementById("messages");
+    messageBuffer.insertBefore(message, messageBuffer.firstChild);
+    message.innerHTML = str;
+  }
 }
 
 export { Polyscope };

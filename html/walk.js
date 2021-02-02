@@ -18,72 +18,88 @@ function vec3ToTHREE(v) {
 let polyscope = new Polyscope();
 
 polyscope.onMeshLoad = (text) => {
-  console.log("reading mesh");
-  geo = Module.readMesh(text, "obj");
-  // console.log("reading mesh geometry");
-  // geo = Module.readGeo(mesh, text, "obj");
-  walkerSurfacePoint = Module.getStartingPoint(geo);
+  polyscope.message("reading mesh ...");
+  // give browser time to print the message
+  setTimeout(() => {
+    geo = Module.readMesh(text, "obj");
+    // polyscope.message("reading mesh geometry");
+    // geo = Module.readGeo(mesh, text, "obj");
+    walkerSurfacePoint = Module.getStartingPoint(geo);
 
-  let stepResult = Module.takeStep(walkerDirection, walkerSurfacePoint, geo, 1);
-  let startingPos = stepResult.pos;
-  trajectory = Array(trajectoryLength).fill(startingPos);
+    let stepResult = Module.takeStep(
+      walkerDirection,
+      walkerSurfacePoint,
+      geo,
+      1
+    );
+    let startingPos = stepResult.pos;
+    trajectory = Array(trajectoryLength).fill(startingPos);
 
-  // remove any previously loaded mesh from scene
-  polyscope.clearAllStructures();
+    // remove any previously loaded mesh from scene
+    polyscope.clearAllStructures();
 
-  polyscope.camera.aspect = window.innerWidth / window.innerHeight;
-  polyscope.camera.updateProjectionMatrix();
+    polyscope.camera.aspect = window.innerWidth / window.innerHeight;
+    polyscope.camera.updateProjectionMatrix();
 
-  console.log("registering base mesh");
-  psBaseMesh = polyscope.registerSurfaceMesh(
-    "Base Mesh",
-    geo.vertexCoordinates(),
-    geo.polygons()
-  );
+    polyscope.message("registering meshes with polyscope ...");
+    console.log("registering base mesh");
+    setTimeout(() => {
+      psBaseMesh = polyscope.registerSurfaceMesh(
+        "Base Mesh",
+        geo.vertexCoordinates(),
+        geo.polygons()
+      );
 
-  console.log("registering walking mesh");
-  psWalkerMesh = polyscope.registerSurfaceMesh(
-    "Walker Mesh",
-    geo.vertexCoordinates(),
-    geo.polygons()
-  );
+      psWalkerMesh = polyscope.registerSurfaceMesh(
+        "Walker Mesh",
+        geo.vertexCoordinates(),
+        geo.polygons()
+      );
 
-  console.log("constructing important function");
-  let fn = [];
-  let coords = geo.vertexCoordinates();
-  for (let iV = 0; iV < coords.size(); iV++) {
-    fn.push(coords.get(iV)[2]);
-  }
-  console.log("registering important function");
-  // let fn = Array.from({ length: psBaseMesh.nV }, () => Math.random() * 10 - 5);
-  psBaseMesh.addVertexScalarQuantity("important function", fn);
+      // Translate walker up to walk along surface, and scale it down
+      // fill position buffer
+      const positions = psWalkerMesh.mesh.geometry.attributes.position.array;
+      let V = psWalkerMesh.mesh.geometry.attributes.position.count;
+      let minY = positions[1];
+      for (let i = 0; i < V; i++) {
+        minY = Math.min(minY, positions[3 * i + 1]);
+      }
+      let scale = 1 / 10;
+      for (let i = 0; i < V; i++) {
+        positions[3 * i + 0] = positions[3 * i + 0] * scale;
+        positions[3 * i + 1] = (positions[3 * i + 1] - minY) * scale;
+        positions[3 * i + 2] = positions[3 * i + 2] * scale;
+      }
+      psWalkerMesh.mesh.geometry.computeBoundingBox();
+      psWalkerMesh.mesh.geometry.computeBoundingSphere();
+      psWalkerMesh.mesh.geometry.attributes.position.needsUpdate = true;
 
-  console.log("registering trajectory");
-  psTrajectory = polyscope.registerCurveNetwork("path", trajectory);
+      polyscope.message("constructing important function ...");
+      setTimeout(() => {
+        let fn = [];
+        let coords = geo.vertexCoordinates();
+        for (let iV = 0; iV < coords.size(); iV++) {
+          fn.push(coords.get(iV)[2]);
+        }
+        polyscope.message("registering important function ...");
+        setTimeout(() => {
+          // let fn = Array.from({ length: psBaseMesh.nV }, () => Math.random() * 10 - 5);
+          psBaseMesh.addVertexScalarQuantity("important function", fn);
 
-  console.log("scaling down walker");
-  // Translate walker up to walk along surface, and scale it down
-  // fill position buffer
-  const positions = psWalkerMesh.mesh.geometry.attributes.position.array;
-  let V = psWalkerMesh.mesh.geometry.attributes.position.count;
-  let minY = positions[1];
-  for (let i = 0; i < V; i++) {
-    minY = Math.min(minY, positions[3 * i + 1]);
-  }
-  let scale = 1 / 10;
-  for (let i = 0; i < V; i++) {
-    positions[3 * i + 0] = positions[3 * i + 0] * scale;
-    positions[3 * i + 1] = (positions[3 * i + 1] - minY) * scale;
-    positions[3 * i + 2] = positions[3 * i + 2] * scale;
-  }
-  psWalkerMesh.mesh.geometry.computeBoundingBox();
-  psWalkerMesh.mesh.geometry.computeBoundingSphere();
-  psWalkerMesh.mesh.geometry.attributes.position.needsUpdate = true;
+          polyscope.message("registering trajectory ...");
+          setTimeout(() => {
+            psTrajectory = polyscope.registerCurveNetwork("path", trajectory);
 
-  // update metadata
-  polyscope.updateDisplayText();
+            // update metadata
+            polyscope.message("Done");
+            polyscope.updateDisplayText();
 
-  document.getElementById("spinner").style.display = "none";
+            document.getElementById("spinner").style.display = "none";
+          }, 1);
+        }, 1);
+      }, 1);
+    }, 1);
+  }, 1);
 };
 
 polyscope.userCallback = () => {
@@ -121,13 +137,15 @@ polyscope.userCallback = () => {
       let pos = stepResult.trajectory.get(iP);
       trajectory.push([pos[0], pos[1], pos[2]]);
     }
-    psTrajectory.updateVertexPositions(trajectory);
+    if (psTrajectory) {
+      psTrajectory.updateVertexPositions(trajectory);
+    }
   }
 };
 
-console.log("waiting for module");
+polyscope.message("waiting for module");
 Module.onRuntimeInitialized = (_) => {
-  console.log("module loaded");
+  polyscope.message("module loaded");
   // moduleInitialized = true;
   polyscope.init();
   polyscope.animate();
