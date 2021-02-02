@@ -67,9 +67,6 @@ class Polyscope {
     this.input.addEventListener(
       "change",
       function (e) {
-        // remove any previously loaded mesh from scene
-        this.clearAllStructures();
-
         // show spinner
         document.getElementById("spinner").style.display = "inline-block";
 
@@ -80,15 +77,18 @@ class Polyscope {
           let reader = new FileReader();
           reader.onload = function (e) {
             this.onMeshLoad(reader.result);
+            document.getElementById("spinner").style.display = "none";
           }.bind(this);
 
           reader.onerror = function (e) {
             alert("Unable to load OBJ file");
+            document.getElementById("spinner").style.display = "none";
           };
 
           reader.readAsText(file);
         } else {
           alert("Please load an OBJ file");
+          document.getElementById("spinner").style.display = "none";
         }
       }.bind(this)
     );

@@ -24,6 +24,51 @@ polyscope.commandGuiFields["Load Mesh"] = function () {
   polyscope.loadMesh(walkMesh);
 };
 io.add(polyscope.commandGuiFields, "Load Mesh");
+polyscope.commandGuiFields["Load New Walker Mesh"] = function () {
+  polyscope.loadMesh((text) => {
+    let geo = Module.readMesh(text, "obj");
+    polyscope.deregisterSurfaceMesh("Walker Mesh");
+
+    psWalkerMesh = polyscope.registerSurfaceMesh(
+      "Walker Mesh",
+      geo.vertexCoordinates(),
+      geo.polygons()
+    );
+
+    // Translate walker up to walk along surface, and scale it down
+    // fill position buffer
+    const positions = psWalkerMesh.mesh.geometry.attributes.position.array;
+    let V = psWalkerMesh.mesh.geometry.attributes.position.count;
+    let minY = positions[1];
+    for (let i = 0; i < V; i++) {
+      minY = Math.min(minY, positions[3 * i + 1]);
+    }
+    let scale = 1 / 10;
+    for (let i = 0; i < V; i++) {
+      positions[3 * i + 0] = positions[3 * i + 0] * scale;
+      positions[3 * i + 1] = (positions[3 * i + 1] - minY) * scale;
+      positions[3 * i + 2] = positions[3 * i + 2] * scale;
+    }
+    psWalkerMesh.mesh.geometry.computeBoundingBox();
+    psWalkerMesh.mesh.geometry.computeBoundingSphere();
+    psWalkerMesh.mesh.geometry.attributes.position.needsUpdate = true;
+  });
+};
+io.add(polyscope.commandGuiFields, "Load New Walker Mesh");
+polyscope.commandGuiFields["Load New Base Mesh"] = function () {
+  polyscope.loadMesh((text) => {
+    geo = Module.readMesh(text, "obj");
+    polyscope.deregisterSurfaceMesh("Base Mesh");
+
+    psBaseMesh = polyscope.registerSurfaceMesh(
+      "Base Mesh",
+      geo.vertexCoordinates(),
+      geo.polygons()
+    );
+    walkerSurfacePoint = Module.getStartingPoint(geo);
+  });
+};
+io.add(polyscope.commandGuiFields, "Load New Base Mesh");
 io.close();
 polyscope.commandGuiFields["Speed"] = 1;
 polyscope.commandGui
@@ -33,6 +78,9 @@ polyscope.commandGui
   .step(0.1);
 
 function walkMesh(text) {
+  // remove any previously loaded mesh from scene
+  polyscope.clearAllStructures();
+
   polyscope.message("reading mesh ...");
   // give browser time to print the message
   setTimeout(() => {
