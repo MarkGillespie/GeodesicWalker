@@ -1,7 +1,12 @@
 import * as THREE from "https://unpkg.com/three@0.125.1/build/three.module.js";
 import { TrackballControls } from "https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js";
 import { WEBGL } from "https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js";
+import { Reflector } from "https://unpkg.com/three@0.125.1/examples/jsm/objects/Reflector.js";
 
+import {
+  groundPlaneVertexShader,
+  groundPlaneFragmentShader,
+} from "./shaders.js";
 import { SurfaceMesh } from "./surface_mesh.js";
 import { CurveNetwork } from "./curve_network.js";
 import { getNextUniqueColor } from "./color_utils.js";
@@ -45,8 +50,13 @@ class Polyscope {
     this.commandGui = new dat.GUI();
     this.commandGuiFields = {};
 
+    this.groundPlane = undefined;
+
     this.onMeshLoad = (text) => {};
     this.userCallback = () => {};
+
+    this.sceneMin = new THREE.Vector3(0, 0, 0);
+    this.sceneMax = new THREE.Vector3(0, 0, 0);
   }
 
   // must be called after onload
@@ -104,7 +114,29 @@ class Polyscope {
     this.initScene();
     this.initLights();
     this.initControls();
+    this.initGroundPlane();
     this.addEventListeners();
+  }
+
+  initGroundPlane() {
+    let tex = new THREE.TextureLoader().load("img/concrete.png");
+    this.groundPlane = new Reflector(new THREE.PlaneGeometry(100, 100), {
+      clipBias: 0.003,
+      textureWidth: window.innerWidth * window.devicePixelRatio,
+      textureHeight: window.innerHeight * window.devicePixelRatio,
+      color: 0x777777,
+    });
+    this.groundPlane.material.vertexShader = groundPlaneVertexShader;
+    this.groundPlane.material.fragmentShader = groundPlaneFragmentShader;
+    this.groundPlane.material.uniforms.tex = { value: tex };
+    this.groundPlane.material.uniforms.alpha = { value: 0.5 };
+    let uvs = new Float32Array(4 * 2);
+    this.groundPlane.geometry.setAttribute(
+      "texture_uv",
+      new THREE.BufferAttribute(Float32Array.from([0, 0, 0, 1, 1, 0, 1, 1]), 2)
+    );
+    this.groundPlane.rotateX(-Math.PI / 2);
+    this.scene.add(this.groundPlane);
   }
 
   loadMesh(callback) {
@@ -142,6 +174,21 @@ class Polyscope {
     document.body.appendChild(structureGuiWrapper);
     structureGuiWrapper.id = "structure-gui";
     structureGuiWrapper.appendChild(this.structureGui.domElement);
+
+    this.polyscopeOptions = this.structureGui.addFolder("Polyscope");
+    this.polyscopeOptions.open();
+    this.structureGuiFields["GroundPlane#Enabled"] = true;
+    this.polyscopeOptions
+      .add(this.structureGuiFields, "GroundPlane#Enabled")
+      .onChange((e) => {
+        if (e) {
+          this.scene.add(this.groundPlane);
+        } else {
+          this.scene.remove(this.groundPlane);
+        }
+      })
+      .listen()
+      .name("Ground Plane");
   }
 
   initCamera() {
@@ -185,6 +232,14 @@ class Polyscope {
     meshStructure.initGui(this.structureGuiFields, meshGui);
 
     this.scene.add(meshStructure.mesh);
+
+    let bbox = new THREE.Box3().setFromObject(meshStructure.mesh);
+
+    this.sceneMin.min(bbox.min);
+    this.sceneMax.max(bbox.max);
+
+    let oldPos = this.groundPlane.position;
+    this.groundPlane.translateZ(this.sceneMin.y - oldPos.y, 1);
 
     return meshStructure;
   }

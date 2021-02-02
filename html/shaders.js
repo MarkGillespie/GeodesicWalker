@@ -179,4 +179,60 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
   return Material;
 }
 
-export { createMatCapMaterial, createVertexScalarFunctionMaterial };
+let groundPlaneVertexShader = `
+  uniform mat4 textureMatrix;
+  attribute vec2 texture_uv;
+
+  varying vec4 vUv;
+  varying vec2 TextureUV;
+
+  void main() {
+
+  	vUv = textureMatrix * vec4( position, 1.0 );
+
+    TextureUV = texture_uv;
+
+  	gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+  }
+`;
+
+let groundPlaneFragmentShader = `
+    uniform vec3 color;
+    uniform sampler2D tDiffuse;
+    uniform sampler2D tex;
+    uniform float alpha;
+
+    varying vec2 TextureUV;
+    varying vec4 vUv;
+
+    float blendOverlay( float base, float blend ) {
+        return( base < 0.5 ? ( 2.0 * base * blend ) : ( 1.0 - 2.0 * ( 1.0 - base ) * ( 1.0 - blend ) ) );
+    }
+
+    vec3 blendOverlay( vec3 base, vec3 blend ) {
+        return vec3( blendOverlay( base.r, blend.r ), blendOverlay( base.g, blend.g ), blendOverlay( base.b, blend.b ) );
+    }
+
+    float onGrid(vec2 coord2D) {
+        // Checker stripes
+        float modDist = min(min(mod(coord2D.x, 1.0), mod(coord2D.y, 1.0)), min(mod(-coord2D.x, 1.0), mod(-coord2D.y, 1.0)));
+        return 1.-smoothstep(0.005, .01, modDist);
+    }
+
+    void main() {
+
+        vec4 mat = texture2D(tex, TextureUV);
+        vec4 base = texture2DProj( tDiffuse, vUv );
+        float t = onGrid(26.*TextureUV);
+        gl_FragColor = (1.-t) * ((1.-alpha) * vec4( blendOverlay( base.rgb, color ), 1.0 ) + alpha * mat) + t*vec4(0,0,0,1);
+
+    }
+`;
+
+export {
+  createMatCapMaterial,
+  createVertexScalarFunctionMaterial,
+  groundPlaneVertexShader,
+  groundPlaneFragmentShader,
+};
