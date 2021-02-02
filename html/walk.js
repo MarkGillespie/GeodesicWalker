@@ -1,5 +1,5 @@
 import * as THREE from "https://unpkg.com/three@0.125.1/build/three.module.js";
-import { polyscope } from "./polyscope.js";
+import { Polyscope } from "./polyscope.js";
 
 let mesh = undefined;
 let geo = undefined;
@@ -15,6 +15,8 @@ let psTrajectory = undefined;
 function vec3ToTHREE(v) {
   return new THREE.Vector3(v[0], v[1], v[2]);
 }
+
+let polyscope = new Polyscope();
 
 polyscope.onMeshLoad = (text) => {
   console.log("reading mesh combinatorics");

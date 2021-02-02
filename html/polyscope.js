@@ -77,31 +77,35 @@ class Polyscope {
   // Must call after window is loaded
   init() {
     this.initInput();
-    this.input.addEventListener("change", function (e) {
-      // remove any previously loaded mesh from scene
-      polyscope.clearAllStructures();
 
-      // show spinner
-      document.getElementById("spinner").style.display = "inline-block";
+    this.input.addEventListener(
+      "change",
+      function (e) {
+        // remove any previously loaded mesh from scene
+        this.clearAllStructures();
 
-      let file = polyscope.input.files[0];
-      let filename = file.name;
+        // show spinner
+        document.getElementById("spinner").style.display = "inline-block";
 
-      if (filename.endsWith(".obj")) {
-        let reader = new FileReader();
-        reader.onload = function (e) {
-          polyscope.onMeshLoad(reader.result);
-        };
+        let file = this.input.files[0];
+        let filename = file.name;
 
-        reader.onerror = function (e) {
-          alert("Unable to load OBJ file");
-        };
+        if (filename.endsWith(".obj")) {
+          let reader = new FileReader();
+          reader.onload = function (e) {
+            this.onMeshLoad(reader.result);
+          }.bind(this);
 
-        reader.readAsText(file);
-      } else {
-        alert("Please load an OBJ file");
-      }
-    });
+          reader.onerror = function (e) {
+            alert("Unable to load OBJ file");
+          };
+
+          reader.readAsText(file);
+        } else {
+          alert("Please load an OBJ file");
+        }
+      }.bind(this)
+    );
 
     this.container = document.createElement("div");
     this.container.classList.add("container");
@@ -285,9 +289,9 @@ class Polyscope {
   addEventListeners() {
     window.addEventListener(
       "resize",
-      () => {
+      function () {
         this.onWindowResize();
-      },
+      }.bind(this),
       false
     );
   }
@@ -302,9 +306,11 @@ class Polyscope {
   }
 
   animate() {
-    requestAnimationFrame(() => {
-      this.animate();
-    });
+    requestAnimationFrame(
+      function () {
+        this.animate();
+      }.bind(this)
+    );
     this.userCallback();
     if (this.controls) this.controls.update();
     this.render();
@@ -321,6 +327,4 @@ class Polyscope {
   }
 }
 
-let polyscope = new Polyscope();
-
-export { polyscope };
+export { Polyscope };
