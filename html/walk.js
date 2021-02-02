@@ -126,25 +126,9 @@ polyscope.userCallback = () => {
   }
 };
 
-// Initialize only after wasm is loaded and page has also loaded
-let windowLoaded = false;
-let moduleInitialized = false;
-window.onload = () => {
-  console.log("window loaded");
-  windowLoaded = true;
-};
-
 Module.onRuntimeInitialized = (_) => {
   console.log("module loaded");
-  moduleInitialized = true;
+  // moduleInitialized = true;
+  polyscope.init();
+  polyscope.animate();
 };
-
-function setup() {
-  if (windowLoaded && moduleInitialized) {
-    polyscope.init();
-    polyscope.animate();
-  } else {
-    requestAnimationFrame(setup);
-  }
-}
-setup();
