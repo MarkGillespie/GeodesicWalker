@@ -35,28 +35,34 @@ polyscope.onMeshLoad = (text) => {
   polyscope.camera.aspect = window.innerWidth / window.innerHeight;
   polyscope.camera.updateProjectionMatrix();
 
+  console.log("registering base mesh");
   psBaseMesh = polyscope.registerSurfaceMesh(
     "Base Mesh",
     geo.vertexCoordinates(),
     mesh.polygons()
   );
 
+  console.log("registering walking mesh");
   psWalkerMesh = polyscope.registerSurfaceMesh(
     "Walker Mesh",
     geo.vertexCoordinates(),
     mesh.polygons()
   );
 
+  console.log("constructing important function");
   let fn = [];
   let coords = geo.vertexCoordinates();
   for (let iV = 0; iV < coords.size(); iV++) {
     fn.push(coords.get(iV)[2]);
   }
+  console.log("registering important function");
   // let fn = Array.from({ length: psBaseMesh.nV }, () => Math.random() * 10 - 5);
   psBaseMesh.addVertexScalarQuantity("important function", fn);
 
+  console.log("registering trajectory");
   psTrajectory = polyscope.registerCurveNetwork("path", trajectory);
 
+  console.log("scaling down walker");
   // Translate walker up to walk along surface, and scale it down
   // fill position buffer
   const positions = psWalkerMesh.mesh.geometry.attributes.position.array;
