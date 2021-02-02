@@ -1,7 +1,6 @@
 import * as THREE from "https://unpkg.com/three@0.125.1/build/three.module.js";
 import { Polyscope } from "./polyscope.js";
 
-let mesh = undefined;
 let geo = undefined;
 let walkerSurfacePoint = undefined;
 let walkerDirection = [1, 0];
@@ -19,10 +18,10 @@ function vec3ToTHREE(v) {
 let polyscope = new Polyscope();
 
 polyscope.onMeshLoad = (text) => {
-  console.log("reading mesh combinatorics");
-  mesh = Module.readMesh(text, "obj");
-  console.log("reading mesh geometry");
-  geo = Module.readGeo(mesh, text, "obj");
+  console.log("reading mesh");
+  geo = Module.readMesh(text, "obj");
+  // console.log("reading mesh geometry");
+  // geo = Module.readGeo(mesh, text, "obj");
   walkerSurfacePoint = Module.getStartingPoint(geo);
 
   let stepResult = Module.takeStep(walkerDirection, walkerSurfacePoint, geo, 1);
@@ -39,14 +38,14 @@ polyscope.onMeshLoad = (text) => {
   psBaseMesh = polyscope.registerSurfaceMesh(
     "Base Mesh",
     geo.vertexCoordinates(),
-    mesh.polygons()
+    geo.polygons()
   );
 
   console.log("registering walking mesh");
   psWalkerMesh = polyscope.registerSurfaceMesh(
     "Walker Mesh",
     geo.vertexCoordinates(),
-    mesh.polygons()
+    geo.polygons()
   );
 
   console.log("constructing important function");
