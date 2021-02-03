@@ -41,6 +41,9 @@ class VertexScalarQuantity {
     this.mesh = new Mesh(this.parent.mesh.geometry.clone(), functionMaterial);
     this.initializeColorMap();
 
+    // Copy some attributes from parent
+    this.mesh.geometry.attributes.position = this.parent.mesh.geometry.attributes.position;
+    this.mesh.geometry.attributes.normal = this.parent.mesh.geometry.attributes.normal;
     this.mesh.material.uniforms.edgeWidth = this.parent.mesh.material.uniforms.edgeWidth;
     this.mesh.material.uniforms.edgeColor = this.parent.mesh.material.uniforms.edgeColor;
   }

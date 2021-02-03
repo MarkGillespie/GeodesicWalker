@@ -101,10 +101,7 @@ class SurfaceMesh {
 
   setSmoothShading(shadeSmooth) {
     if (shadeSmooth) {
-      this.mesh.geometry.setAttribute(
-        "normal",
-        new BufferAttribute(this.computeSmoothNormals(), 3)
-      );
+      this.mesh.geometry.attributes.normal.array = this.computeSmoothNormals();
     } else {
       this.mesh.geometry.computeVertexNormals();
     }
