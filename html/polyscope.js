@@ -334,6 +334,24 @@ class Polyscope {
     this.controls.rotateSpeed = 5.0;
   }
 
+  clearDataFields() {
+    document.getElementById("info-body-field-names").innerHTML = "";
+    document.getElementById("info-body-field-values").innerHTML = "";
+  }
+
+  showDataField(name, value) {
+    let infoName = document.createElement("div");
+    infoName.innerHTML = name;
+    document.getElementById("info-body-field-names").appendChild(infoName);
+    let infoValue = document.createElement("div");
+    infoValue.innerHTML = value;
+    document.getElementById("info-body-field-values").appendChild(infoValue);
+  }
+
+  setDataHeader(name) {
+    document.getElementById("info-head").innerHTML = name;
+  }
+
   pick(clickX, clickY) {
     let pickResult = evaluatePickQuery(
       this.pickRenderer,
@@ -405,6 +423,18 @@ class Polyscope {
     let messageBuffer = document.getElementById("messages");
     messageBuffer.insertBefore(message, messageBuffer.firstChild);
     message.innerHTML = str;
+  }
+
+  prettyVector(vec) {
+    return (
+      "(" +
+      vec[0].toFixed(2) +
+      ", " +
+      vec[1].toFixed(2) +
+      ", " +
+      vec[2].toFixed(2) +
+      ")"
+    );
   }
 }
 

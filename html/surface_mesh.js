@@ -304,30 +304,26 @@ class SurfaceMesh {
 
   pickElement(localInd) {
     if (localInd < this.facePickIndStart) {
-      document.getElementById("info-head").innerHTML = "Vertex " + localInd;
-      let info = document.getElementById("info-body");
-      info.innerHTML = "";
+      this.ps.setDataHeader("Vertex " + localInd);
 
-      let field = document.createElement("div");
-      field.innerHTML = "Position: " + this.coords.get(localInd);
-      info.appendChild(field);
+      this.ps.clearDataFields();
+      this.ps.showDataField(
+        "position",
+        this.ps.prettyVector(this.coords.get(localInd))
+      );
 
       for (let qName in this.quantities) {
         let qVal = this.quantities[qName].getVertexValue(localInd);
         if (qVal) {
-          field = document.createElement("div");
-          field.innerHTML = qName + ": " + qVal;
-          info.appendChild(field);
+          this.ps.showDataField(qName, qVal);
         }
       }
     } else if (localInd < this.edgePickIndStart) {
-      document.getElementById("info-head").innerHTML =
-        "Face: " + (localInd - this.facePickIndStart);
-      document.getElementById("info-body").innerHTML = "";
+      this.ps.setDataHeader("Face: " + (localInd - this.facePickIndStart));
+      this.ps.clearDataFields();
     } else {
-      document.getElementById("info-head").innerHTML =
-        "Edge: " + (localInd - this.edgePickIndStart);
-      document.getElementById("info-body").innerHTML = "";
+      this.ps.setDataHeader("Edge: " + (localInd - this.edgePickIndStart));
+      this.ps.clearDataFields();
     }
   }
 

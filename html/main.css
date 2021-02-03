@@ -56,12 +56,33 @@ body {
 
 #selection-info {
     position: absolute;
-    padding-bottom: 8em;
     right: 0;
     bottom: 100px;
     z-index: 2;
     background-color: #ffffffaa;
-    padding: 1em;
+    box-shadow: 0 0 10px #0003;
+}
+
+#info-head {
+    padding: 0.5em 1em 0.5em 1em;
+    background-color: #ffffffbb;
+}
+#info-body {
+    display: grid;
+    grid-template-columns: 30% auto;
+    grid-template-rows: 100%;
+    overflow-x: scroll;
+    grid-gap: 1em;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+
+#info-body div {
+    white-space: nowrap;
+}
+
+#info-body-field-names {
+    text-align: right;
 }
 
 
