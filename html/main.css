@@ -54,6 +54,16 @@ body {
     z-index: 2;
 }
 
+#selection-info {
+    position: absolute;
+    padding-bottom: 8em;
+    right: 0;
+    bottom: 100px;
+    z-index: 2;
+    background-color: #ffffffaa;
+    padding: 1em;
+}
+
 
 #messages {
     color: #777;

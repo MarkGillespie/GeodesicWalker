@@ -231,9 +231,95 @@ let groundPlaneFragmentShader = `
     }
 `;
 
+function createSurfaceMeshPickMaterial() {
+  let vertexShader = `
+        attribute vec3 barycoord;
+        attribute vec3 color;
+        attribute vec3 vertex_color0;
+        attribute vec3 vertex_color1;
+        attribute vec3 vertex_color2;
+        attribute vec3 edge_color0;
+        attribute vec3 edge_color1;
+        attribute vec3 edge_color2;
+        attribute vec3 face_color;
+
+        varying vec3 BaryCoord;
+        varying vec3 VertexColor0;
+        varying vec3 VertexColor1;
+        varying vec3 VertexColor2;
+        varying vec3 EdgeColor0;
+        varying vec3 EdgeColor1;
+        varying vec3 EdgeColor2;
+        varying vec3 FaceColor;
+
+
+        void main()
+        {
+            BaryCoord = barycoord;
+            VertexColor0 = vertex_color0;
+            VertexColor1 = vertex_color1;
+            VertexColor2 = vertex_color2;
+            EdgeColor0 = edge_color0;
+            EdgeColor1 = edge_color1;
+            EdgeColor2 = edge_color2;
+            FaceColor = face_color;
+
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+        }
+    `;
+
+  let fragmentShader = `
+        varying vec3 BaryCoord;
+        varying vec3 VertexColor0;
+        varying vec3 VertexColor1;
+        varying vec3 VertexColor2;
+        varying vec3 EdgeColor0;
+        varying vec3 EdgeColor1;
+        varying vec3 EdgeColor2;
+        varying vec3 FaceColor;
+
+        ${common}
+
+        void main(void){
+
+            // Parameters defining the pick shape (in barycentric 0-1 units)
+            float vertRadius = 0.2;
+            float edgeRadius = 0.2;
+
+            vec3 shadeColor = FaceColor;
+
+            // Test vertices
+            if (BaryCoord[0] > 1.0-vertRadius) {
+                shadeColor = VertexColor0;
+            } else if(BaryCoord[1] > 1.0-vertRadius) {
+                shadeColor = VertexColor1;
+            } else if (BaryCoord[2] > 1.0-vertRadius) {
+                shadeColor = VertexColor2;
+            } else if (BaryCoord[2] < edgeRadius) {
+                shadeColor = EdgeColor0;
+            } else if (BaryCoord[0] < edgeRadius) {
+                shadeColor = EdgeColor1;
+            } else if (BaryCoord[1] < edgeRadius) {
+                shadeColor = EdgeColor2;
+            }
+
+            gl_FragColor = vec4(shadeColor, 1.);
+        }
+    `;
+
+  let Material = new ShaderMaterial({
+    vertexShader,
+    fragmentShader,
+  });
+
+  return Material;
+}
+
 export {
   createMatCapMaterial,
   createVertexScalarFunctionMaterial,
+  createSurfaceMeshPickMaterial,
   groundPlaneVertexShader,
   groundPlaneFragmentShader,
 };

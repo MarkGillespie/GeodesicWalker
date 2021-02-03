@@ -8,6 +8,7 @@ import {
   groundPlaneFragmentShader,
 } from "./shaders.js";
 import { SurfaceMesh } from "./surface_mesh.js";
+import { evaluatePickQuery } from "./pick.js";
 import { CurveNetwork } from "./curve_network.js";
 import { getNextUniqueColor } from "./color_utils.js";
 
@@ -30,11 +31,14 @@ class Polyscope {
     this.input = undefined;
 
     this.renderer = undefined;
+    this.scene = undefined;
     this.camera = undefined;
     this.controls = undefined;
     this.shiftClick = false;
-    this.scene = undefined;
     this.matcapTextures = undefined;
+
+    this.pickRenderer = undefined;
+    this.pickScene = undefined;
 
     this.surfaceMeshes = {};
     this.curveNetworks = {};
@@ -165,6 +169,15 @@ class Polyscope {
     this.renderer.setClearColor(0xffffff, 1.0);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.container.appendChild(this.renderer.domElement);
+
+    this.pickRenderer = new THREE.WebGLRenderer({
+      antialias: false, // turn antialiasing off for color based picking
+    });
+    this.pickRenderer.setPixelRatio(window.devicePixelRatio);
+    this.pickRenderer.setClearColor(0xffffff, 1.0);
+    this.pickRenderer.setSize(window.innerWidth, window.innerHeight);
+    // TODO: do I need to do this?
+    container.appendChild(this.pickRenderer.domElement);
   }
 
   initGUI() {
@@ -205,6 +218,9 @@ class Polyscope {
   initScene() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0xffffff);
+
+    this.pickScene = new THREE.Scene();
+    this.pickScene.background = new THREE.Color(0xffffff);
   }
 
   initLights() {
@@ -232,6 +248,8 @@ class Polyscope {
     meshStructure.initGui(this.structureGuiFields, meshGui);
 
     this.scene.add(meshStructure.mesh);
+    // this.scene.add(meshStructure.pickMesh);
+    this.pickScene.add(meshStructure.pickMesh);
 
     let bbox = new THREE.Box3().setFromObject(meshStructure.mesh);
 
@@ -316,14 +334,22 @@ class Polyscope {
     this.controls.rotateSpeed = 5.0;
   }
 
-  addEventListeners() {
-    window.addEventListener(
-      "resize",
-      function () {
-        this.onWindowResize();
-      }.bind(this),
-      false
+  pick(clickX, clickY) {
+    let pickResult = evaluatePickQuery(
+      this.pickRenderer,
+      this.pickScene,
+      this.camera,
+      clickX,
+      clickY
     );
+    if (pickResult.structure) {
+      pickResult.structure.pickElement(pickResult.localInd);
+    }
+  }
+
+  addEventListeners() {
+    window.addEventListener("resize", this.onWindowResize.bind(this), false);
+    window.addEventListener("click", this.onMouseClick.bind(this), false);
   }
 
   onWindowResize() {
@@ -333,6 +359,17 @@ class Polyscope {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.controls.handleResize();
     this.render();
+  }
+
+  onMouseClick(event) {
+    if (
+      event.clientX >= 0 &&
+      event.clientX <= window.innerWidth &&
+      event.clientY >= 0 &&
+      event.clientY <= window.innerHeight
+    ) {
+      this.pick(event.clientX, event.clientY);
+    }
   }
 
   animate() {

@@ -110,6 +110,16 @@ class VertexScalarQuantity {
     this.mesh.geometry.attributes.color.needsUpdate = true;
   }
 
+  getVertexValue(iV) {
+    return this.values[iV];
+  }
+  getEdgeValue(iE) {
+    return undefined;
+  }
+  getFaceValue(iE) {
+    return undefined;
+  }
+
   remove() {}
 }
 

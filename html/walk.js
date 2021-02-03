@@ -142,8 +142,8 @@ function walkMesh(text) {
         }
         polyscope.message("registering important function ...");
         setTimeout(() => {
-          psBaseMesh.addVertexScalarQuantity("y", y);
-          psBaseMesh.addVertexScalarQuantity("z", z);
+          psBaseMesh.addVertexScalarQuantity("function y", y);
+          psBaseMesh.addVertexScalarQuantity("function z", z);
 
           polyscope.message("registering trajectory ...");
           setTimeout(() => {
