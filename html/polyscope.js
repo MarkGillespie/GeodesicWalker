@@ -349,7 +349,14 @@ class Polyscope {
 
   addEventListeners() {
     window.addEventListener("resize", this.onWindowResize.bind(this), false);
-    window.addEventListener("click", this.onMouseClick.bind(this), false);
+
+    // attacking the eventListener to the renderer instead of the window ensures
+    // that clicking on the GUI doesn't trigger polyscope's mouseClick handler
+    this.renderer.domElement.addEventListener(
+      "click",
+      this.onMouseClick.bind(this),
+      false
+    );
   }
 
   onWindowResize() {
