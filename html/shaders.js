@@ -217,7 +217,7 @@ let groundPlaneFragmentShader = `
     float onGrid(vec2 coord2D) {
         // Checker stripes
         float modDist = min(min(mod(coord2D.x, 1.0), mod(coord2D.y, 1.0)), min(mod(-coord2D.x, 1.0), mod(-coord2D.y, 1.0)));
-        return 1.-smoothstep(0.005, .01, modDist);
+        return 1.-smoothstep(0.005, .02, modDist);
     }
 
     void main() {
@@ -225,7 +225,8 @@ let groundPlaneFragmentShader = `
         vec4 mat = texture2D(tex, TextureUV);
         vec4 base = texture2DProj( tDiffuse, vUv );
         float t = onGrid(26.*TextureUV);
-        gl_FragColor = (1.-t) * ((1.-alpha) * vec4( blendOverlay( base.rgb, color ), 1.0 ) + alpha * mat) + t*vec4(0,0,0,1);
+
+        gl_FragColor = (1.-t) * ((1.-alpha) * vec4( blendOverlay( base.rgb, color ), 1.0 ) + alpha * mat) + t*vec4(0.3,0.3,0.3,1.);
 
     }
 `;
