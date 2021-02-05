@@ -1,5 +1,6 @@
 import {
   InstancedMesh,
+  InstancedBufferAttribute,
   IcosahedronGeometry,
   Vector3,
   Matrix4,
@@ -10,7 +11,8 @@ import { requestPickBufferRange, pickIndToVector } from "./pick.js";
 
 import {
   createInstancedMatCapMaterial,
-  createSurfaceMeshPickMaterial,
+  createInstancedScalarFunctionMaterial,
+  createPointCloudPickMaterial,
 } from "./shaders.js";
 import { getNextUniqueColor } from "./color_utils.js";
 import { PointCloudScalarQuantity } from "./scalar_quantity.js";
@@ -36,7 +38,6 @@ class PointCloud {
 
   addScalarQuantity(name, values) {
     this.quantities[name] = new PointCloudScalarQuantity(name, values, this);
-
     let quantityGui = this.guiFolder.addFolder(name);
     this.quantities[name].initGui(this.guiFields, quantityGui);
   }
@@ -87,6 +88,7 @@ class PointCloud {
 
   setRadius(rad) {
     this.mesh.material.uniforms.scale.value = rad;
+    this.pickMesh.material.uniforms.scale.value = rad;
   }
 
   setEnabled(enabled) {
@@ -103,13 +105,13 @@ class PointCloud {
       if (!enabledQuantity) {
         this.ps.scene.add(this.mesh);
       }
-      // this.ps.pickScene.add(this.pickMesh);
+      this.ps.pickScene.add(this.pickMesh);
     } else {
       for (let q in this.quantities) {
         this.ps.scene.remove(this.quantities[q].mesh);
       }
       this.ps.scene.remove(this.mesh);
-      // this.ps.pickScene.remove(this.pickMesh);
+      this.ps.pickScene.remove(this.pickMesh);
     }
   }
 
@@ -173,7 +175,7 @@ class PointCloud {
   }
 
   pickElement(localInd) {
-    this.ps.setDataHeader("Vertex " + localInd);
+    this.ps.setDataHeader(`Point Cloud ${this.name} Vertex ${localInd}`);
 
     this.ps.clearDataFields();
     this.ps.showDataField(
@@ -191,58 +193,41 @@ class PointCloud {
 
   // must be called after constructThreeMesh
   constructThreePickMesh(coords) {
-    /*
-    let pickGeo = new BufferGeometry();
-
     let totalPickElements = this.nV;
 
-    // In "global" indices, indexing all elements in the scene, used to fill buffers for drawing here
-
     // 3 dimensions
-    let vertexColors = new Float32Array(3 * this.nV);
+    let colors = new Float32Array(3 * this.nV);
 
-    // Build all quantities in each face
-    for (let iF = 0; iF < F; iF++) {
-      let face = faces.get(iF);
-      let fColor = pickIndToVector(iF + faceGlobalPickIndStart);
+    // In "global" indices, indexing all elements in the scene, used to fill buffers for drawing here
+    let pickStart = requestPickBufferRange(this, totalPickElements);
 
-      let vColors = [0, 1, 2].map((i) =>
-        pickIndToVector(pickStart + face.get(i))
-      );
-      let eColors = [1, 2, 0].map((i) => {
-        let edgeHash = minmax(face.get(i), face.get((i + 1) % 3));
-        return pickIndToVector(edgeGlobalPickIndStart + edgeIndex[edgeHash]);
-      });
-
-      for (let iV = 0; iV < 3; iV++) {
-        let vertex = face.get(iV);
-
-        for (let iD = 0; iD < 3; ++iD) {
-          faceColors[3 * 3 * iF + 3 * iV + iD] = fColor[iD];
-
-          vertexColors0[3 * 3 * iF + 3 * iV + iD] = vColors[0][iD];
-          vertexColors1[3 * 3 * iF + 3 * iV + iD] = vColors[1][iD];
-          vertexColors2[3 * 3 * iF + 3 * iV + iD] = vColors[2][iD];
-          edgeColors0[3 * 3 * iF + 3 * iV + iD] = eColors[2][iD];
-          edgeColors1[3 * 3 * iF + 3 * iV + iD] = eColors[0][iD];
-          edgeColors2[3 * 3 * iF + 3 * iV + iD] = eColors[1][iD];
-        }
+    // compute colors in each face
+    for (let iV = 0; iV < this.nV; iV++) {
+      let vColor = pickIndToVector(iV + pickStart);
+      for (let iD = 0; iD < 3; ++iD) {
+        colors[3 * iV + +iD] = vColor[iD];
       }
     }
 
-    // Positions and barycoords are copied from this.mesh.geometry
-    // This ensures that moving the vertex positions of the mesh also moves the pick mesh's vertices
-    pickGeo.setAttribute("position", this.mesh.geometry.attributes.position);
-
-    pickGeo.setAttribute("vertex_color", new BufferAttribute(vertexColors, 3));
-
     // create matcap material
-    let pickMaterial = createSurfaceMeshPickMaterial();
+    let pickMaterial = createPointCloudPickMaterial();
+    let pickMesh = new InstancedMesh(
+      this.mesh.geometry.clone(),
+      pickMaterial,
+      this.nV
+    );
+    pickMesh.geometry.setAttribute(
+      "color",
+      new InstancedBufferAttribute(colors, 3)
+    );
 
-    // create mesh
-    return new Mesh(pickGeo, pickMaterial);
-        */
-    return this.mesh;
+    // Positions are copied from this.mesh.geometry
+    // This ensures that moving the vertex positions of the mesh also moves the pick mesh's vertices
+    pickMesh.geometry.attributes.position = this.mesh.geometry.attributes.position;
+    pickMesh.material.uniforms.scale = this.mesh.material.uniforms.scale;
+    pickMesh.instanceMatrix = this.mesh.instanceMatrix;
+
+    return pickMesh;
   }
 
   updatePositions() {}

@@ -251,7 +251,6 @@ class Polyscope {
     meshStructure.initGui(this.structureGuiFields, meshGui);
 
     this.scene.add(meshStructure.mesh);
-    // this.scene.add(meshStructure.pickMesh);
     this.pickScene.add(meshStructure.pickMesh);
 
     let bbox = new THREE.Box3().setFromObject(meshStructure.mesh);
@@ -315,6 +314,7 @@ class Polyscope {
     cloudStructure.initGui(this.structureGuiFields, cloudGui);
 
     this.scene.add(cloudStructure.mesh);
+    this.pickScene.add(cloudStructure.pickMesh);
 
     return cloudStructure;
   }

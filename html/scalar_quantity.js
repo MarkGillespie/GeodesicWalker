@@ -153,8 +153,6 @@ class PointCloudScalarQuantity {
       this.ps.matcapTextures.k
     );
 
-    let sphereGeometry = new IcosahedronGeometry(0.025, 2);
-
     // create matcap material
     let matcapMaterial = createInstancedScalarFunctionMaterial(
       this.ps.matcapTextures.r,

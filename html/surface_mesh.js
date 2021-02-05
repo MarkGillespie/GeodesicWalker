@@ -306,7 +306,7 @@ class SurfaceMesh {
 
   pickElement(localInd) {
     if (localInd < this.facePickIndStart) {
-      this.ps.setDataHeader("Vertex " + localInd);
+      this.ps.setDataHeader(`Surface Mesh ${this.name} Vertex ${localInd}`);
 
       this.ps.clearDataFields();
       this.ps.showDataField(
@@ -321,10 +321,14 @@ class SurfaceMesh {
         }
       }
     } else if (localInd < this.edgePickIndStart) {
-      this.ps.setDataHeader("Face: " + (localInd - this.facePickIndStart));
+      this.ps.setDataHeader(
+        `Surface Mesh ${this.name} Face ${localInd - this.facePickIndStart}`
+      );
       this.ps.clearDataFields();
     } else {
-      this.ps.setDataHeader("Edge: " + (localInd - this.edgePickIndStart));
+      this.ps.setDataHeader(
+        `Surface Mesh ${this.name} Edge ${localInd - this.edgePickIndStart}`
+      );
       this.ps.clearDataFields();
     }
   }

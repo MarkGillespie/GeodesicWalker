@@ -443,12 +443,48 @@ function createInstancedScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
   return Material;
 }
 
+function createPointCloudPickMaterial() {
+  let vertexShader = `
+        uniform float scale;
+        attribute vec3 color;
+
+        varying vec3 Color;
+
+
+        void main()
+        {
+            Color = color;
+
+            gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4( scale * position, 1.0 );
+
+        }
+    `;
+
+  let fragmentShader = `
+        varying vec3 Color;
+
+        ${common}
+
+        void main(void){
+            gl_FragColor = vec4(Color, 1.);
+        }
+    `;
+
+  let Material = new ShaderMaterial({
+    vertexShader,
+    fragmentShader,
+  });
+
+  return Material;
+}
+
 export {
   createMatCapMaterial,
   createInstancedMatCapMaterial,
   createVertexScalarFunctionMaterial,
   createInstancedScalarFunctionMaterial,
   createSurfaceMeshPickMaterial,
+  createPointCloudPickMaterial,
   groundPlaneVertexShader,
   groundPlaneFragmentShader,
 };
