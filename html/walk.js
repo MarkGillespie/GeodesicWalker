@@ -113,6 +113,24 @@ function walkMesh(text) {
         geo.polygons()
       );
 
+      let subset = {
+        coords: geo.vertexCoordinates(),
+        get: function (iV) {
+          return this.coords.get(10 * iV);
+        },
+        size: () => 100,
+      };
+
+      let cloud_fn = [];
+      for (let iV = 0; iV < subset.size(); iV++) {
+        cloud_fn.push(Math.random());
+      }
+
+      let psCloud = polyscope.registerPointCloud("vertex cloud", subset);
+      psCloud.addScalarQuantity("random function", cloud_fn);
+      psCloud.setEnabled(false);
+      psCloud.guiFolder.close();
+
       // Translate walker up to walk along surface, and scale it down
       // fill position buffer
       const positions = psWalkerMesh.mesh.geometry.attributes.position.array;

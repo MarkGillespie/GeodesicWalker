@@ -87,7 +87,6 @@ class SurfaceMesh {
       })
       .listen()
       .name("Edge Width");
-    guiFolder.open();
 
     guiFields[this.name + "#Edge Color"] = [0, 0, 0];
     guiFolder
@@ -97,6 +96,8 @@ class SurfaceMesh {
       })
       .listen()
       .name("Edge Color");
+
+    guiFolder.open();
   }
 
   setSmoothShading(shadeSmooth) {
@@ -120,6 +121,7 @@ class SurfaceMesh {
 
   setEnabled(enabled) {
     this.enabled = enabled;
+    this.guiFields[this.name + "#Enabled"] = enabled;
     if (enabled) {
       let enabledQuantity = false;
       for (let q in this.quantities) {

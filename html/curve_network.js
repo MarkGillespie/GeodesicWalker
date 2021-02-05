@@ -25,6 +25,7 @@ class CurveNetwork {
   }
 
   setEnabled(enabled) {
+    this.guiFields[this.name + "#Enabled"] = enabled;
     if (enabled) {
       this.ps.scene.add(this.mesh);
     } else {

@@ -168,7 +168,6 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
       Matcap_g: { value: tex_g },
       Matcap_b: { value: tex_b },
       Matcap_k: { value: tex_k },
-      color: { value: new Vector3(1, 0, 1) },
       edgeColor: { value: new Vector3(0, 0, 0) },
       edgeWidth: { value: 0 },
     },
@@ -316,9 +315,139 @@ function createSurfaceMeshPickMaterial() {
   return Material;
 }
 
+function createInstancedMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
+  let vertexShader = `
+        uniform float scale;
+        varying vec2 Point;
+
+        void main()
+        {
+            vec3 vNormal = (modelViewMatrix * instanceMatrix * vec4(normal, 0.)).xyz;
+            vNormal = normalize(vNormal);
+
+            Point.x = vNormal.x * 0.5 + 0.5;
+            Point.y = vNormal.y * 0.5 + 0.5;
+
+            gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4( scale * position, 1.0 );
+
+        }
+    `;
+
+  let fragmentShader = `
+        uniform sampler2D Matcap_r; // Matcap texture
+        uniform sampler2D Matcap_g; // Matcap texture
+        uniform sampler2D Matcap_b; // Matcap texture
+        uniform sampler2D Matcap_k; // Matcap texture
+        uniform vec3 color;
+
+        varying vec2 Point;
+
+        ${common}
+
+        void main(void){
+
+
+            vec2 coord = Point * 0.95; // pull slightly inward, to reduce sampling artifacts near edges
+
+            vec4 mat_r = gammaCorrect(texture2D(Matcap_r, coord));
+            vec4 mat_g = gammaCorrect(texture2D(Matcap_g, coord));
+            vec4 mat_b = gammaCorrect(texture2D(Matcap_b, coord));
+            vec4 mat_k = gammaCorrect(texture2D(Matcap_k, coord));
+
+            vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b +
+                                (1. - color.r - color.g - color.b) * mat_k;
+
+            gl_FragColor = colorCombined;
+        }
+    `;
+
+  let Material = new ShaderMaterial({
+    uniforms: {
+      Matcap_r: { value: tex_r },
+      Matcap_g: { value: tex_g },
+      Matcap_b: { value: tex_b },
+      Matcap_k: { value: tex_k },
+      color: { value: new Vector3(1, 0, 1) },
+      scale: { value: 1 },
+    },
+    vertexShader,
+    fragmentShader,
+  });
+
+  return Material;
+}
+
+function createInstancedScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
+  let vertexShader = `
+        uniform float scale;
+        attribute vec3 color;
+
+        varying vec3 Color;
+        varying vec2 Point;
+
+        void main()
+        {
+            vec3 vNormal = (modelViewMatrix * instanceMatrix * vec4(normal, 0.)).xyz;
+            vNormal = normalize(vNormal);
+
+            Point.x = vNormal.x * 0.5 + 0.5;
+            Point.y = vNormal.y * 0.5 + 0.5;
+
+            Color = color;
+
+            gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4( scale * position, 1.0 );
+
+        }
+    `;
+
+  let fragmentShader = `
+        uniform sampler2D Matcap_r; // Matcap texture
+        uniform sampler2D Matcap_g; // Matcap texture
+        uniform sampler2D Matcap_b; // Matcap texture
+        uniform sampler2D Matcap_k; // Matcap texture
+
+        varying vec3 Color;
+        varying vec2 Point;
+
+        ${common}
+
+        void main(void){
+
+
+            vec2 coord = Point * 0.95; // pull slightly inward, to reduce sampling artifacts near edges
+
+            vec4 mat_r = gammaCorrect(texture2D(Matcap_r, coord));
+            vec4 mat_g = gammaCorrect(texture2D(Matcap_g, coord));
+            vec4 mat_b = gammaCorrect(texture2D(Matcap_b, coord));
+            vec4 mat_k = gammaCorrect(texture2D(Matcap_k, coord));
+
+            vec4 colorCombined = Color.r * mat_r + Color.g * mat_g + Color.b * mat_b +
+                                (1. - Color.r - Color.g - Color.b) * mat_k;
+
+            gl_FragColor = colorCombined;
+        }
+    `;
+
+  let Material = new ShaderMaterial({
+    uniforms: {
+      Matcap_r: { value: tex_r },
+      Matcap_g: { value: tex_g },
+      Matcap_b: { value: tex_b },
+      Matcap_k: { value: tex_k },
+      scale: { value: 1 },
+    },
+    vertexShader,
+    fragmentShader,
+  });
+
+  return Material;
+}
+
 export {
   createMatCapMaterial,
+  createInstancedMatCapMaterial,
   createVertexScalarFunctionMaterial,
+  createInstancedScalarFunctionMaterial,
   createSurfaceMeshPickMaterial,
   groundPlaneVertexShader,
   groundPlaneFragmentShader,

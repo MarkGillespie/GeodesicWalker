@@ -8,6 +8,7 @@ import {
   groundPlaneFragmentShader,
 } from "./shaders.js";
 import { SurfaceMesh } from "./surface_mesh.js";
+import { PointCloud } from "./point_cloud.js";
 import { evaluatePickQuery } from "./pick.js";
 import { CurveNetwork } from "./curve_network.js";
 import { getNextUniqueColor } from "./color_utils.js";
@@ -42,6 +43,7 @@ class Polyscope {
 
     this.surfaceMeshes = {};
     this.curveNetworks = {};
+    this.pointClouds = {};
 
     this.mesh = undefined;
     this.geo = undefined;
@@ -49,7 +51,8 @@ class Polyscope {
     this.structureGui = undefined;
     this.structureGuiFields = {};
     this.structureGuiMeshes = undefined;
-    this.structureCurveNetworks = undefined;
+    this.structureGuiCurveNetworks = undefined;
+    this.structureGuiPointClouds = undefined;
 
     this.commandGui = new dat.GUI();
     this.commandGuiFields = {};
@@ -295,6 +298,25 @@ class Polyscope {
     this.scene.add(curveStructure.mesh);
 
     return curveStructure;
+  }
+
+  registerPointCloud(name, vertexCoordinates) {
+    if (!this.structureGuiPointCluods) {
+      this.structureGuiPointClouds = this.structureGui.addFolder(
+        "Point Clouds"
+      );
+      this.structureGuiPointClouds.open();
+    }
+
+    let cloudStructure = new PointCloud(vertexCoordinates, name, this);
+    this.pointClouds[name] = cloudStructure;
+
+    let cloudGui = this.structureGuiPointClouds.addFolder(name);
+    cloudStructure.initGui(this.structureGuiFields, cloudGui);
+
+    this.scene.add(cloudStructure.mesh);
+
+    return cloudStructure;
   }
 
   deregisterSurfaceMesh(name) {
