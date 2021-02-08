@@ -2,6 +2,7 @@ import * as THREE from "https://unpkg.com/three@0.125.1/build/three.module.js";
 import { TrackballControls } from "https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js";
 import { WEBGL } from "https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js";
 import { Reflector } from "https://unpkg.com/three@0.125.1/examples/jsm/objects/Reflector.js";
+import { RGBELoader } from "https://unpkg.com/three@0.125.1/examples/jsm/loaders/RGBELoader.js";
 
 import {
   groundPlaneVertexShader,
@@ -162,6 +163,52 @@ class Polyscope {
     this.matcapTextures.g = new THREE.TextureLoader().load("img/clay_g.png");
     this.matcapTextures.b = new THREE.TextureLoader().load("img/clay_b.png");
     this.matcapTextures.k = new THREE.TextureLoader().load("img/clay_k.png");
+
+    // new RGBELoader().setDataType(THREE.FloatType).load(
+    //   "img/clay_r.hdr",
+    //   function (texture, textureData) {
+    //     this.matcapTextures.r = texture;
+    //     console.log(texture);
+    //     console.log(textureData);
+    //   }.bind(this)
+    // );
+    // new RGBELoader().setDataType(THREE.FloatType).load(
+    //   "img/clay_g.hdr",
+    //   function (texture, textureData) {
+    //     this.matcapTextures.g = texture;
+    //   }.bind(this)
+    // );
+    // new RGBELoader().setDataType(THREE.UnsignedByteType).load(
+    //   "img/clay_b.hdr",
+    //   function (texture, textureData) {
+    //     this.matcapTextures.b = texture;
+
+    //     const material = new THREE.MeshBasicMaterial({ map: texture });
+    //     const quad = new THREE.PlaneGeometry(
+    //       (1.5 * textureData.width) / textureData.height,
+    //       1.5
+    //     );
+    //     const mesh = new THREE.Mesh(quad, material);
+    //     mesh.translateX(2);
+    //     this.scene.add(mesh);
+    //   }.bind(this)
+    // );
+    // new RGBELoader().setDataType(THREE.FloatType).load(
+    //   "img/clay_k.hdr",
+    //   function (texture, textureData) {
+    //     this.matcapTextures.k = texture;
+    //     console.log(texture);
+    //     console.log(textureData);
+
+    //     const material = new THREE.MeshBasicMaterial({ map: texture });
+    //     const quad = new THREE.PlaneGeometry(
+    //       (1.5 * textureData.width) / textureData.height,
+    //       1.5
+    //     );
+    //     const mesh = new THREE.Mesh(quad, material);
+    //     this.scene.add(mesh);
+    //   }.bind(this)
+    // );
   }
 
   initRenderer(container) {
