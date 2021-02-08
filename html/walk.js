@@ -163,6 +163,18 @@ function walkMesh(text) {
           psBaseMesh.addVertexScalarQuantity("function y", y);
           psBaseMesh.addVertexScalarQuantity("function z", z);
 
+          let normals = {
+            n: psBaseMesh.smoothVertexNormals,
+            get: function (i) {
+              return new THREE.Vector3(
+                this.n[3 * i],
+                this.n[3 * i + 1],
+                this.n[3 * i + 2]
+              );
+            },
+          };
+          psBaseMesh.addVertexVectorQuantity("normal vectors", normals);
+
           polyscope.message("registering trajectory ...");
           setTimeout(() => {
             psTrajectory = polyscope.registerCurveNetwork("path", trajectory);

@@ -15,6 +15,7 @@ import {
 } from "./shaders.js";
 import { getNextUniqueColor } from "./color_utils.js";
 import { VertexScalarQuantity } from "./scalar_quantity.js";
+import { VertexVectorQuantity } from "./vector_quantity.js";
 
 class SurfaceMesh {
   constructor(coords, faces, name, polyscopeEnvironment) {
@@ -28,6 +29,11 @@ class SurfaceMesh {
     // build three.js mesh
     [this.mesh, this.geo] = this.constructThreeMesh(coords, faces);
 
+    [
+      this.smoothVertexNormals,
+      this.smoothCornerNormals,
+    ] = this.computeSmoothNormals();
+
     this.pickMesh = this.constructThreePickMesh(coords, faces);
 
     this.quantities = {};
@@ -40,6 +46,13 @@ class SurfaceMesh {
 
   addVertexScalarQuantity(name, values) {
     this.quantities[name] = new VertexScalarQuantity(name, values, this);
+
+    let quantityGui = this.guiFolder.addFolder(name);
+    this.quantities[name].initGui(this.guiFields, quantityGui);
+  }
+
+  addVertexVectorQuantity(name, values) {
+    this.quantities[name] = new VertexVectorQuantity(name, values, this);
 
     let quantityGui = this.guiFolder.addFolder(name);
     this.quantities[name].initGui(this.guiFields, quantityGui);
@@ -102,7 +115,12 @@ class SurfaceMesh {
 
   setSmoothShading(shadeSmooth) {
     if (shadeSmooth) {
-      this.mesh.geometry.attributes.normal.array = this.computeSmoothNormals();
+      // make a copy of smoothCornerNormals rather than setting the geometry's normals
+      // to smoothCornerNormals themselves so that calling computeVertexNormals later
+      // doesn't overwrite our nice smoothCornerNormals
+      this.mesh.geometry.attributes.normal.array = new Float32Array(
+        this.smoothCornerNormals
+      );
     } else {
       this.mesh.geometry.computeVertexNormals();
     }
@@ -144,18 +162,20 @@ class SurfaceMesh {
   }
 
   enableQuantity(q) {
-    for (let pName in this.quantities) {
-      if (pName != q.name) {
+    if (q.isDominantQuantity) {
+      for (let pName in this.quantities) {
         let p = this.quantities[pName];
-        this.guiFields[p.prefix + "#Enabled"] = false;
-        p.enabled = false;
+        if (p.isDominantQuantity && pName != q.name) {
+          this.guiFields[p.prefix + "#Enabled"] = false;
+          p.enabled = false;
+          this.ps.scene.remove(p.mesh);
+        }
       }
     }
 
     if (this.enabled) {
-      this.ps.scene.remove(this.mesh);
-      for (let pName in this.quantities) {
-        this.ps.scene.remove(this.quantities[pName].mesh);
+      if (q.isDominantQuantity) {
+        this.ps.scene.remove(this.mesh);
       }
       this.ps.scene.add(q.mesh);
     }
@@ -220,7 +240,7 @@ class SurfaceMesh {
         }
       }
     }
-    return normals;
+    return [vertexNormals, normals];
   }
 
   setPosition(pos) {

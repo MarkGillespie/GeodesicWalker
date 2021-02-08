@@ -33,6 +33,8 @@ class VertexScalarQuantity {
     this.name = name;
     this.enabled = false;
 
+    this.isDominantQuantity = true;
+
     [this.dataMin, this.dataMax] = computeMinMax(values);
 
     // create a new mesh material
@@ -82,8 +84,6 @@ class VertexScalarQuantity {
       })
       .listen()
       .name("Color Map");
-
-    guiFolder.open();
   }
 
   setEnabled(enabled) {
@@ -142,6 +142,8 @@ class PointCloudScalarQuantity {
     this.values = values;
     this.name = name;
     this.enabled = false;
+
+    this.isDominantQuantity = true;
 
     [this.dataMin, this.dataMax] = computeMinMax(values);
 
@@ -205,8 +207,6 @@ class PointCloudScalarQuantity {
       })
       .listen()
       .name("Color Map");
-
-    guiFolder.open();
   }
 
   setEnabled(enabled) {

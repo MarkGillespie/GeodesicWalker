@@ -116,18 +116,20 @@ class PointCloud {
   }
 
   enableQuantity(q) {
-    for (let pName in this.quantities) {
-      if (pName != q.name) {
+    if (q.isDominantQuantity) {
+      for (let pName in this.quantities) {
         let p = this.quantities[pName];
-        this.guiFields[p.prefix + "#Enabled"] = false;
-        p.enabled = false;
+        if (p.isDominantQuantity && pName != q.name) {
+          this.guiFields[p.prefix + "#Enabled"] = false;
+          p.enabled = false;
+          this.ps.scene.remove(p.mesh);
+        }
       }
     }
 
     if (this.enabled) {
-      this.ps.scene.remove(this.mesh);
-      for (let pName in this.quantities) {
-        this.ps.scene.remove(this.quantities[pName].mesh);
+      if (q.isDominantQuantity) {
+        this.ps.scene.remove(this.mesh);
       }
       this.ps.scene.add(q.mesh);
     }
