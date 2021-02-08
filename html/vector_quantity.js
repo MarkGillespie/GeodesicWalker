@@ -170,7 +170,9 @@ class VertexVectorQuantity {
   }
 
   getVertexValue(iV) {
-    return this.values.get(iV);
+    let vec = this.values.get(iV);
+    let vecList = [vec.x, vec.y, vec.z];
+    return this.ps.prettyVector(vecList);
   }
   getEdgeValue(iE) {
     return undefined;
