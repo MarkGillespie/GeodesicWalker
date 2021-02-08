@@ -3,6 +3,7 @@ import { TrackballControls } from "https://unpkg.com/three@0.125.1/examples/jsm/
 import { WEBGL } from "https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js";
 import { Reflector } from "https://unpkg.com/three@0.125.1/examples/jsm/objects/Reflector.js";
 import { RGBELoader } from "https://unpkg.com/three@0.125.1/examples/jsm/loaders/RGBELoader.js";
+import Stats from "https://unpkg.com/three@0.125.1/examples/jsm/libs/stats.module.js";
 
 import {
   groundPlaneVertexShader,
@@ -114,6 +115,9 @@ class Polyscope {
     this.container = document.createElement("div");
     this.container.classList.add("container");
     document.body.appendChild(this.container);
+
+    this.stats = new Stats();
+    this.container.append(this.stats.dom);
 
     this.initRenderer(this.container);
     this.initMatcap();
@@ -475,6 +479,7 @@ class Polyscope {
     this.userCallback();
     if (this.controls) this.controls.update();
     this.render();
+    this.stats.update();
   }
 
   render() {
