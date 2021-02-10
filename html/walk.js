@@ -16,7 +16,7 @@ function vec3ToTHREE(v) {
 }
 
 // create geoptic manager
-let geoptic = new Geoptic();
+let geoptic = new Geoptic("geoptic.js");
 
 // Set up UI panel
 let io = geoptic.commandGui.addFolder("IO");
