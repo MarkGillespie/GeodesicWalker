@@ -12,3 +12,6 @@
 [submodule "html/geometry-processing-js"]
 	path = html/geometry-processing-js
 	url = git@github.com:GeometryCollective/geometry-processing-js
+[submodule "html/geoptic.js"]
+	path = html/geoptic.js
+	url = git@github.com:MarkGillespie/geoptic.js

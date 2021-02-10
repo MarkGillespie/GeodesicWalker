@@ -1,5 +1,5 @@
 import * as THREE from "https://unpkg.com/three@0.125.1/build/three.module.js";
-import { Polyscope } from "./polyscope.js";
+import { Geoptic } from "./geoptic.js/geoptic.js";
 
 let geo = undefined;
 let walkerSurfacePoint = undefined;
@@ -15,21 +15,21 @@ function vec3ToTHREE(v) {
   return new THREE.Vector3(v[0], v[1], v[2]);
 }
 
-// create polyscope manager
-let polyscope = new Polyscope();
+// create geoptic manager
+let geoptic = new Geoptic();
 
 // Set up UI panel
-let io = polyscope.commandGui.addFolder("IO");
-polyscope.commandGuiFields["Load Mesh"] = function () {
-  polyscope.loadMesh(walkMesh);
+let io = geoptic.commandGui.addFolder("IO");
+geoptic.commandGuiFields["Load Mesh"] = function () {
+  geoptic.loadMesh(walkMesh);
 };
-io.add(polyscope.commandGuiFields, "Load Mesh");
-polyscope.commandGuiFields["Load New Walker Mesh"] = function () {
-  polyscope.loadMesh((text) => {
+io.add(geoptic.commandGuiFields, "Load Mesh");
+geoptic.commandGuiFields["Load New Walker Mesh"] = function () {
+  geoptic.loadMesh((text) => {
     let geo = Module.readMesh(text, "obj");
-    polyscope.deregisterSurfaceMesh("Walker Mesh");
+    geoptic.deregisterSurfaceMesh("Walker Mesh");
 
-    psWalkerMesh = polyscope.registerSurfaceMesh(
+    psWalkerMesh = geoptic.registerSurfaceMesh(
       "Walker Mesh",
       geo.vertexCoordinates(),
       geo.polygons()
@@ -54,13 +54,13 @@ polyscope.commandGuiFields["Load New Walker Mesh"] = function () {
     psWalkerMesh.mesh.geometry.attributes.position.needsUpdate = true;
   });
 };
-io.add(polyscope.commandGuiFields, "Load New Walker Mesh");
-polyscope.commandGuiFields["Load New Base Mesh"] = function () {
-  polyscope.loadMesh((text) => {
+io.add(geoptic.commandGuiFields, "Load New Walker Mesh");
+geoptic.commandGuiFields["Load New Base Mesh"] = function () {
+  geoptic.loadMesh((text) => {
     geo = Module.readMesh(text, "obj");
-    polyscope.deregisterSurfaceMesh("Base Mesh");
+    geoptic.deregisterSurfaceMesh("Base Mesh");
 
-    psBaseMesh = polyscope.registerSurfaceMesh(
+    psBaseMesh = geoptic.registerSurfaceMesh(
       "Base Mesh",
       geo.vertexCoordinates(),
       geo.polygons()
@@ -68,20 +68,20 @@ polyscope.commandGuiFields["Load New Base Mesh"] = function () {
     walkerSurfacePoint = Module.getStartingPoint(geo);
   });
 };
-io.add(polyscope.commandGuiFields, "Load New Base Mesh");
+io.add(geoptic.commandGuiFields, "Load New Base Mesh");
 io.close();
-polyscope.commandGuiFields["Speed"] = 1;
-polyscope.commandGui
-  .add(polyscope.commandGuiFields, "Speed")
+geoptic.commandGuiFields["Speed"] = 1;
+geoptic.commandGui
+  .add(geoptic.commandGuiFields, "Speed")
   .min(0)
   .max(10)
   .step(0.1);
 
 function walkMesh(text) {
   // remove any previously loaded mesh from scene
-  polyscope.clearAllStructures();
+  geoptic.clearAllStructures();
 
-  polyscope.message("reading mesh ...");
+  geoptic.message("reading mesh ...");
   // give browser time to print the message
   setTimeout(() => {
     geo = Module.readMesh(text, "obj");
@@ -97,17 +97,17 @@ function walkMesh(text) {
     trajectory = Array(trajectoryLength).fill(startingPos);
 
     // remove any previously loaded mesh from scene
-    polyscope.clearAllStructures();
+    geoptic.clearAllStructures();
 
-    polyscope.message("registering meshes with polyscope ...");
+    geoptic.message("registering meshes with geoptic ...");
     setTimeout(() => {
-      psBaseMesh = polyscope.registerSurfaceMesh(
+      psBaseMesh = geoptic.registerSurfaceMesh(
         "Base Mesh",
         geo.vertexCoordinates(),
         geo.polygons()
       );
 
-      psWalkerMesh = polyscope.registerSurfaceMesh(
+      psWalkerMesh = geoptic.registerSurfaceMesh(
         "Walker Mesh",
         geo.vertexCoordinates(),
         geo.polygons()
@@ -126,7 +126,7 @@ function walkMesh(text) {
         cloud_fn.push(Math.random());
       }
 
-      let psCloud = polyscope.registerPointCloud("vertex cloud", subset);
+      let psCloud = geoptic.registerPointCloud("vertex cloud", subset);
       psCloud.addScalarQuantity("random function", cloud_fn);
       psCloud.setEnabled(false);
       psCloud.guiFolder.close();
@@ -149,7 +149,7 @@ function walkMesh(text) {
       psWalkerMesh.mesh.geometry.computeBoundingSphere();
       psWalkerMesh.mesh.geometry.attributes.position.needsUpdate = true;
 
-      polyscope.message("constructing important function ...");
+      geoptic.message("constructing important function ...");
       setTimeout(() => {
         let y = [];
         let z = [];
@@ -158,7 +158,7 @@ function walkMesh(text) {
           y.push(coords.get(iV)[2]);
           z.push(coords.get(iV)[1]);
         }
-        polyscope.message("registering important function ...");
+        geoptic.message("registering important function ...");
         setTimeout(() => {
           psBaseMesh.addVertexScalarQuantity("function y", y);
           psBaseMesh.addVertexScalarQuantity("function z", z);
@@ -175,12 +175,12 @@ function walkMesh(text) {
           };
           psBaseMesh.addVertexVectorQuantity("normal vectors", normals);
 
-          polyscope.message("registering trajectory ...");
+          geoptic.message("registering trajectory ...");
           setTimeout(() => {
-            psTrajectory = polyscope.registerCurveNetwork("path", trajectory);
+            psTrajectory = geoptic.registerCurveNetwork("path", trajectory);
 
             // update metadata
-            polyscope.message("Done");
+            geoptic.message("Done");
 
             // turn off spinner
             document.getElementById("spinner").style.display = "none";
@@ -191,13 +191,13 @@ function walkMesh(text) {
   }, 0);
 }
 
-polyscope.userCallback = () => {
+geoptic.userCallback = () => {
   if (psWalkerMesh) {
     let stepResult = Module.takeStep(
       walkerDirection,
       walkerSurfacePoint,
       geo,
-      polyscope.commandGuiFields["Speed"] / 100
+      geoptic.commandGuiFields["Speed"] / 100
     );
 
     let T = vec3ToTHREE(stepResult.T);
@@ -232,18 +232,18 @@ polyscope.userCallback = () => {
   }
 };
 
-polyscope.message("waiting for webassembly to load");
+geoptic.message("waiting for webassembly to load");
 Module.onRuntimeInitialized = (_) => {
   // Once the wasm has loaded, we can start our app
-  polyscope.message("webassembly loaded");
+  geoptic.message("webassembly loaded");
 
-  // Initialize polyscope
-  polyscope.init();
+  // Initialize geoptic
+  geoptic.init();
 
   // Load the meshes and set up our state
   walkMesh(bunny);
 
-  // Start animating with polyscope
-  // This will call polyscope.userCallback() every frame
-  polyscope.animate();
+  // Start animating with geoptic
+  // This will call geoptic.userCallback() every frame
+  geoptic.animate();
 };
