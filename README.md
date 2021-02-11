@@ -1,6 +1,8 @@
 # GeodesicWalker
+Try the online demo [here](https://markjgillespie.com/Demos/GeodesicWalker/html/)!
+
 ![Spot the cow walking along spot the cow.](images/octo-walk.gif)
-A simple project to visualize a mesh walking along geodesics on itself. Powered by [geometry-central](http://geometry-central.net/) and [Polyscope](http://polyscope.run/).
+A simple project to visualize a mesh walking along geodesics on itself. Powered by [geometry-central](http://geometry-central.net/) and [Polyscope](http://polyscope.run/). Javascript visualization performed by [geoptic.js](http://github.com/MarkGillespie/geoptic.js).
 
 To compile the code, use
 ``` bash
