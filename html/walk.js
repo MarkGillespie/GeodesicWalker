@@ -26,6 +26,7 @@ geoptic.commandGuiFields["Load Mesh"] = function () {
   geoptic.loadMesh(walkMesh);
 };
 io.add(geoptic.commandGuiFields, "Load Mesh");
+
 geoptic.commandGuiFields["Load New Walker Mesh"] = function () {
   geoptic.loadMesh((text) => {
     let geo = Module.readMesh(text, "obj");
@@ -54,11 +55,15 @@ geoptic.commandGuiFields["Load New Walker Mesh"] = function () {
     psWalkerMesh.mesh.geometry.computeBoundingBox();
     psWalkerMesh.mesh.geometry.computeBoundingSphere();
     psWalkerMesh.mesh.geometry.attributes.position.needsUpdate = true;
+
+    geo.delete();
   });
 };
 io.add(geoptic.commandGuiFields, "Load New Walker Mesh");
+
 geoptic.commandGuiFields["Load New Base Mesh"] = function () {
   geoptic.loadMesh((text) => {
+    geo.delete();
     geo = Module.readMesh(text, "obj");
     geoptic.deregisterSurfaceMesh("Base Mesh");
 
@@ -80,6 +85,7 @@ geoptic.commandGui
   .step(0.1);
 
 function walkMesh(text) {
+  if (geo) geo.delete();
   // remove any previously loaded mesh from scene
   geoptic.clearAllStructures();
 
