@@ -1,5 +1,7 @@
 import * as THREE from "https://unpkg.com/three@0.125.1/build/three.module.js";
-import { Geoptic } from "./geoptic.js/geoptic.js";
+
+// import { Geoptic } from "./geoptic.js/src/geoptic.js";
+import { Geoptic } from "./geoptic.js/build/geoptic.module.min.js";
 
 let geo = undefined;
 let walkerSurfacePoint = undefined;
@@ -113,24 +115,6 @@ function walkMesh(text) {
         geo.polygons()
       );
 
-      let subset = {
-        coords: geo.vertexCoordinates(),
-        get: function (iV) {
-          return this.coords.get(10 * iV);
-        },
-        size: () => 100,
-      };
-
-      let cloud_fn = [];
-      for (let iV = 0; iV < subset.size(); iV++) {
-        cloud_fn.push(Math.random());
-      }
-
-      let psCloud = geoptic.registerPointCloud("vertex cloud", subset);
-      psCloud.addScalarQuantity("random function", cloud_fn);
-      psCloud.setEnabled(false);
-      psCloud.guiFolder.close();
-
       // Translate walker up to walk along surface, and scale it down
       // fill position buffer
       const positions = psWalkerMesh.mesh.geometry.attributes.position.array;
@@ -149,43 +133,15 @@ function walkMesh(text) {
       psWalkerMesh.mesh.geometry.computeBoundingSphere();
       psWalkerMesh.mesh.geometry.attributes.position.needsUpdate = true;
 
-      geoptic.message("constructing important function ...");
+      geoptic.message("registering trajectory ...");
       setTimeout(() => {
-        let y = [];
-        let z = [];
-        let coords = geo.vertexCoordinates();
-        for (let iV = 0; iV < coords.size(); iV++) {
-          y.push(coords.get(iV)[2]);
-          z.push(coords.get(iV)[1]);
-        }
-        geoptic.message("registering important function ...");
-        setTimeout(() => {
-          psBaseMesh.addVertexScalarQuantity("function y", y);
-          psBaseMesh.addVertexScalarQuantity("function z", z);
+        psTrajectory = geoptic.registerCurveNetwork("path", trajectory);
 
-          let normals = {
-            n: psBaseMesh.smoothVertexNormals,
-            get: function (i) {
-              return new THREE.Vector3(
-                this.n[3 * i],
-                this.n[3 * i + 1],
-                this.n[3 * i + 2]
-              );
-            },
-          };
-          psBaseMesh.addVertexVectorQuantity("normal vectors", normals);
+        // update metadata
+        geoptic.message("Done");
 
-          geoptic.message("registering trajectory ...");
-          setTimeout(() => {
-            psTrajectory = geoptic.registerCurveNetwork("path", trajectory);
-
-            // update metadata
-            geoptic.message("Done");
-
-            // turn off spinner
-            document.getElementById("spinner").style.display = "none";
-          }, 0);
-        }, 0);
+        // turn off spinner
+        document.getElementById("spinner").style.display = "none";
       }, 0);
     }, 0);
   }, 0);
