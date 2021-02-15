@@ -1,4 +1,7 @@
-import * as THREE from "https://unpkg.com/three@0.125.1/build/three.module.js";
+import {
+  Vector3,
+  Matrix4,
+} from "https://unpkg.com/three@0.125.1/build/three.module.js";
 
 // import { Geoptic } from "./geoptic.js/src/geoptic.js";
 import { Geoptic } from "./geoptic.js/build/geoptic.module.min.js";
@@ -15,7 +18,7 @@ let psTrajectory = undefined;
 
 // create geoptic manager
 let geoptic = new Geoptic({
-  parent: document.getElementById("geoptic-panel"),
+  // parent: document.getElementById("geoptic-panel"),
   path: "geoptic.js",
   picks: false,
 });
@@ -47,7 +50,7 @@ if (Module.runtimeInitialized) {
 }
 
 function vec3ToTHREE(v) {
-  return new THREE.Vector3(v[0], v[1], v[2]);
+  return new Vector3(v[0], v[1], v[2]);
 }
 
 // Set up UI panel
@@ -194,7 +197,7 @@ geoptic.userCallback = () => {
 
     psWalkerMesh.setPosition(vec3ToTHREE(stepResult.pos));
 
-    let mat = new THREE.Matrix4();
+    let mat = new Matrix4();
     // prettier-ignore
     mat.set(
           -T.x, N.x, -B.x, 0,
