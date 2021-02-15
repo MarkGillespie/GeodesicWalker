@@ -1,31 +1,24 @@
 body {
-  font-family: Arial, Helvetica, sans-serif;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
+    font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    min-height: 100vh;
 }
 
 #info {
-  position: absolute;
-  width: 100%;
-  text-align: center;
-}
-
-#meta {
-  position: absolute;
-  top: 50px;
-  left: 35%;
-  width: 30%;
-  font-size: 80%;
-  white-space: pre;
+    margin-top: 5em;
+    position: absolute;
+    width: 100%;
+    text-align: center;
 }
 
 #logo {
-  position: absolute;
-  bottom: 10px;
-  right: 40px;
-  opacity: 0.8;
-  z-index: 2;
+    position: absolute;
+    bottom: 10px;
+    right: 40px;
+    opacity: 0.8;
+    z-index: 4;
 }
 
 #github-link {
@@ -39,70 +32,16 @@ body {
     margin: 2em;
 }
 
-.container {
-    position: absolute;
-    left: 0;
-    top: 0;
-    z-index: -1;
-}
-
-#structure-gui {
-    position: absolute;
-    padding-bottom: 8em;
-    left: 0;
-    bottom: 0;
-    z-index: 2;
-}
-
-#selection-info {
-    position: absolute;
-    right: 0;
-    bottom: 100px;
-    z-index: 2;
-    background-color: #ffffffaa;
-    box-shadow: 0 0 10px #0003;
-}
-
-#info-head {
-    padding: 0.5em 1em 0.5em 1em;
-    background-color: #ffffffbb;
-}
-#info-body {
-    display: grid;
-    grid-template-columns: 30% auto;
-    grid-template-rows: 100%;
-    overflow-x: scroll;
-    grid-gap: 1em;
-    padding-left: 1em;
-    padding-right: 1em;
-}
-
-#info-body div {
-    white-space: nowrap;
-}
-
-#info-body-field-names {
-    text-align: right;
-}
-
-
-#messages {
-    color: #777;
+#title {
     width: 100%;
-    height: 4em;
-    margin: 0;
-    padding: 1em;
-    overflow-y: scroll;
-    z-index: 1;
-    position: absolute;
-    left: 0;
-    bottom: 0;
+    text-align: center;
+    z-index: 2;         /* Put in front of demo */
+    position: absolute; /* needed for z-index to apply */
+    /* also, lets title overlap demo */
 }
 
-#messages div:first-child {
-    color: #1b1f8a;
-}
-
-.warning {
-    color: #770000;
+#geoptic-panel {
+    position:relative; /* needed to place child panels relative to this one */
+    width: 100vw;
+    height: 100vh;
 }

@@ -6,7 +6,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
   <link rel="stylesheet" href="main.css">
-  <link rel="stylesheet" href="spinner.css">
+  <link rel="stylesheet" href="geoptic.js/src/style.css">
 </head>
 
 <body>
@@ -23,26 +23,15 @@
       <img src="geometry-processing-js/imgs/logo.png" width="80" height="80" border="0">
     </a>
   </div>
-  <div id="messages"><div></div></div>
 
-  <div id="selection-info">
-      <div id="info-head"></div>
-      <div id="info-body">
-          <div id="info-body-field-names"></div>
-          <div id="info-body-field-values"></div>
-      </div>
-  </div>
-
-
-  <script type="module" src="https://unpkg.com/three@0.125.1/build/three.module.js"></script>
-  <script type="module" src="https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js"></script>
-  <script type="module" src="https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js"></script>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.5/dat.gui.min.js"></script>
+  <div id="geoptic-panel"></div>
 
   <script src="geometry-processing-js/input/bunny.js"></script>
 
   <script src="embind.js"></script>
+  <script type="text/javascript">
+   Module.onRuntimeInitialized = (_) => { Module.runtimeInitialized=true;};
+  </script>
 
   <script type="module" src="walk.js"></script>
 </body>

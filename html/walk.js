@@ -13,12 +13,42 @@ let psBaseMesh = undefined;
 let psWalkerMesh = undefined;
 let psTrajectory = undefined;
 
+// create geoptic manager
+let geoptic = new Geoptic({
+  parent: document.getElementById("geoptic-panel"),
+  path: "geoptic.js",
+  picks: false,
+});
+
+geoptic.message("waiting for webassembly to load");
+
+if (Module.runtimeInitialized) {
+  // Once the wasm has loaded, we can start our app
+  geoptic.message("webassembly loaded");
+
+  // Load the meshes and set up our state
+  walkMesh(bunny);
+
+  // Start animating with geoptic
+  // This will call geoptic.userCallback() every frame
+  geoptic.animate();
+} else {
+  Module.onRuntimeInitialized = (_) => {
+    // Once the wasm has loaded, we can start our app
+    geoptic.message("webassembly loaded");
+
+    // Load the meshes and set up our state
+    walkMesh(bunny);
+
+    // Start animating with geoptic
+    // This will call geoptic.userCallback() every frame
+    geoptic.animate();
+  };
+}
+
 function vec3ToTHREE(v) {
   return new THREE.Vector3(v[0], v[1], v[2]);
 }
-
-// create geoptic manager
-let geoptic = new Geoptic("geoptic.js");
 
 // Set up UI panel
 let io = geoptic.commandGui.addFolder("IO");
@@ -30,7 +60,6 @@ io.add(geoptic.commandGuiFields, "Load Mesh");
 geoptic.commandGuiFields["Load New Walker Mesh"] = function () {
   geoptic.loadMesh((text) => {
     let geo = Module.readMesh(text, "obj");
-    geoptic.deregisterSurfaceMesh("Walker Mesh");
 
     psWalkerMesh = geoptic.registerSurfaceMesh(
       "Walker Mesh",
@@ -65,7 +94,6 @@ geoptic.commandGuiFields["Load New Base Mesh"] = function () {
   geoptic.loadMesh((text) => {
     geo.delete();
     geo = Module.readMesh(text, "obj");
-    geoptic.deregisterSurfaceMesh("Base Mesh");
 
     psBaseMesh = geoptic.registerSurfaceMesh(
       "Base Mesh",
@@ -86,8 +114,6 @@ geoptic.commandGui
 
 function walkMesh(text) {
   if (geo) geo.delete();
-  // remove any previously loaded mesh from scene
-  geoptic.clearAllStructures();
 
   geoptic.message("reading mesh ...");
   // give browser time to print the message
@@ -103,9 +129,6 @@ function walkMesh(text) {
     );
     let startingPos = stepResult.pos;
     trajectory = Array(trajectoryLength).fill(startingPos);
-
-    // remove any previously loaded mesh from scene
-    geoptic.clearAllStructures();
 
     geoptic.message("registering meshes with geoptic ...");
     setTimeout(() => {
@@ -192,20 +215,4 @@ geoptic.userCallback = () => {
       psTrajectory.updateVertexPositions(trajectory);
     }
   }
-};
-
-geoptic.message("waiting for webassembly to load");
-Module.onRuntimeInitialized = (_) => {
-  // Once the wasm has loaded, we can start our app
-  geoptic.message("webassembly loaded");
-
-  // Initialize geoptic
-  geoptic.init();
-
-  // Load the meshes and set up our state
-  walkMesh(bunny);
-
-  // Start animating with geoptic
-  // This will call geoptic.userCallback() every frame
-  geoptic.animate();
 };
